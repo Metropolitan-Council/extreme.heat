@@ -1,0 +1,216 @@
+---
+title: "Synthesizing the impact of extreme heat waves on the Twin Cities region"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  bookdown::word_document2:
+    reference_docx: "../RSEA/wordtemplate.docx"
+    toc: true
+    toc_depth: 4
+always_allow_html: true
+urlcolor: blue
+---
+
+```{r include = F}
+library(tidyverse)
+library(lubridate)
+library(councilR)
+
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, results = "hide",
+  fig.pos = "H",
+  fig.width = 6,
+  dpi = 300
+)
+`%not_in%` <- Negate(`%in%`)
+
+```
+
+# Introduction
+
+The Metropolitan Council provides local planning assistance for communities across the Twin Cities region. As part of this assistance, the Council provides an “Extreme Heat Mapping Tool” for the Twin Cities. This tool shows the land surface temperature during the historic July 2016 heat wave and was created from remote-sensing data (Landsat 8). This dataset has proved particularly valuable as communities evaluate and plan for climate change adaptation techniques, future development and land use planning, and also undertake immediate interventions to reduce heat-related health consequences. 
+
+The goal of this project is to do a major update of the data in order to better integrate the consequences of climate change into city planning and policy decisions, and ultimately help inform a more sustainable and healthier future for the Twin Cities region.  
+
+
+# Summer 2022 plan 
+
+## Map
+
+### Extreme heat in summer 2022
+
+- Develop code to analyze thermal sensor data from the *new* Landsat 9 satellite. I've previously explored years 2016-2021 in Landsat 8, and the July 2016 heat wave is indeed historic (and has the best data clarity across the region; little cloud/smoke cover, etc.) 
+
+```{r heatmap, fig.align = 'center', out.width = "70%", fig.cap = "Example heat map summer 2022", results='markup'}
+knitr::include_graphics(("./heatmap.png"))
+```
+
+### Current and past data
+
+Would it be useful to have multiple layers with different dates?
+
+- 2022 heat wave (hopeful update)
+- 2016 heat wave (historic event)
+- real time (it seems like people should just use weather applications for this, but idk)
+
+## Narrative 
+
+Update StoryMap. Consider:
+
+- Cooling centers;is it possible to map them? Or have definitions become standardized? $ vs free, etc. 
+- Revisit human vulnerability! Is it possible to capture a personal/neighborhood experience of heat? EAB impacting trees and making heat more intense, cooling centers, pools/splash pads, health outcomes/impacts, grassroots efforts related to heat (green roofs, heat pumps/cooling, programs $ nonprofits providing relief). **Consider RCP program - could students do some of this qualitative data gathering?**
+- Anything with comorbidities / the study Baltimore did about heat and deaths?
+
+
+### Link demographic data to land surface temperatures to understand the social and economic *IMPACT* of extreme heat on residents
+
+- can we do this for race at the *block* level? (seems to be in [redistricting data](https://data.census.gov/cedsci/table?g=1400000US27123030100%241000000&y=2020&d=DEC%20Redistricting%20Data%20%28PL%2094-171%29))
+
+- some ideas below, [website indicates](https://metrocouncil.org/Communities/Planning/Local-Planning-Assistance/CVA/Extreme-Heat.aspx) "Human vulnerability to extreme heat is of concern for many stakeholders in the region, particularly county public health departments and agency partners." --> let's try to explicitly connect the dots!
+
+  - are there racial/economic disparities with exposure to extreme heat?
+  - how are populations which are more vulnerable to extreme heat (ie youth/elders, others?) being impacted?
+
+```{r, fig.asp = .3, fig.cap = "Example plots showing how demographics intersect with extreme heat."}
+mtcars %>%
+  mutate(mpg = mpg * (-1),
+         qsec = qsec * (-1)) %>%
+  pivot_longer(names_to = "names", values_to = "values", -mpg) %>%
+  filter(names %in% c("qsec", "wt", "drat")) %>%
+  ggplot(aes(x = mpg, y = values)) + 
+  facet_wrap(~names, scales = "free") +
+  geom_point(alpha = .5) +
+  geom_smooth(fill = NA, color = colors$councilBlue, method = "lm") +
+  facet_wrap(~names,
+          scales = "free", 
+          nrow = 1, 
+          strip.position = "left",
+          labeller = as_labeller(c(qsec = str_wrap("Population with a senstive age (% under 18 or 65+)", 10), 
+                                   wt = str_wrap("Population identifying as a person of color (%)", 10),
+                                   drat = str_wrap("Mean income ($)", 10)))) +
+  theme_council_open() +
+  theme(strip.placement = "outside") +
+  labs(x = "Land surface temperature during (date) heatwave") +
+  theme(axis.text = element_blank(),
+        axis.title.y = element_blank(),
+        strip.text.y.left = element_text(angle = 0))
+```
+
+
+
+### Link variables about the built and natural environments to understand *ADAPTATION* strategies for extreme heat 
+
+If rising temperatures are inevitable, how are residents/cities going to adapt?
+
+- tree canopy (link with growing shade) / impervious surfaces (link with surface with purpose and/or localized flooding); **show how land use decisions impact local temperatures**
+- housing metrics from ztrax zillow data; is there an "adaptation gap" to extreme heat? (idea = systemic structural/economic/racial issues may also manifest as no cooling available to residents to mitigate extreme heat)
+
+**ADD OVERLAY MAPS** to the storymap! (kind of like how land use is there now, but try to be more explicit? think about how the data could be compelling to inform landscape architecture, etc.)
+
+```{r, fig.asp = .3, fig.cap="Example plots showing how the built/natural environments interact with extreme heat."}
+mtcars %>%
+  mutate(mpg = mpg * (-1),
+         qsec = qsec * (-1),
+         wt2 = wt,
+         wt = wt * (-1)) %>%
+  pivot_longer(names_to = "names", values_to = "values", -mpg) %>%
+  filter(names %in% c("qsec", "wt", "wt2")) %>%
+  ggplot(aes(x = mpg, y = values)) + 
+  facet_wrap(~names, scales = "free") +
+  geom_point(alpha = .5) +
+  geom_smooth(fill = NA, color = colors$councilBlue, method = "lm") +
+  facet_wrap(~names,
+          scales = "free", 
+          nrow = 1, 
+          strip.position = "left",
+          labeller = as_labeller(c(qsec = str_wrap("Residences with air conditioning (%)", 10), 
+                                   # wt = str_wrap("Owner occupied residences (%)", 20)
+                                   wt = str_wrap("Impervious surfaces (%)", 10),
+                                   wt2 = str_wrap("Tree canopy in 2021 (%)", 10)
+                                   ))) +
+  theme_council_open() +
+  theme(strip.placement = "outside") +
+  labs(x = "Land surface temperature during (date) heatwave") +
+  theme(axis.text = element_blank(),
+        axis.title.y = element_blank(),
+        strip.text.y.left = element_text(angle = 0))
+```
+
+### Anazlyze growing *RISK* of extreme heat from historic data
+
+- analyze past trends of extreme heat; show possible futures too?? (link with greenhouse gas work)
+
+
+```{r warmstripes, fig.align = 'center', out.width = "70%", fig.asp = .3, fig.cap = "Example past temperature trends; annual maximum", results='markup'}
+knitr::include_graphics(("./warmingstripes.png"))
+```
+
+
+```{r, fig.asp = .5, fig.cap = "Example trends showing a growing risk from extreme heat"}
+mtcars %>%
+  mutate(mpg = mpg * (-1),
+         qsec = qsec * (-1),
+         qsec3 = qsec,
+         qsec2 = qsec) %>%
+  pivot_longer(names_to = "names", values_to = "values", -mpg) %>%
+  filter(names %in% c("qsec2", "qsec3")) %>%
+  ggplot(aes(x = mpg, y = values)) + 
+  facet_wrap(~names, scales = "free") +
+  geom_point(alpha = .5) +
+  geom_smooth(fill = NA, color = colors$councilBlue, method = "lm") +
+  facet_wrap(~names,
+          scales = "free", 
+          nrow = 1, 
+          strip.position = "left",
+          labeller = as_labeller(c(qsec = str_wrap("Maximum summer temperature", 10), 
+                                   qsec2 = str_wrap("Prolonged heat wave events (5 days or more w/ temps >90F)", 10),
+                                   qsec3 = str_wrap("Days above 90F", 10)
+                                   ))) +
+  theme_council_open() +
+  theme(strip.placement = "outside") +
+  labs(x = "Year") +
+  theme(axis.text = element_blank(),
+        axis.title.y = element_blank(),
+        strip.text.y.left = element_text(angle = 0)) #+
+  # geom_hline(aes(yintercept = -13))
+```
+
+```{r, fig.asp = .3, fig.cap = "Example plot showing a lengthening season with extreme heat risk (terminology/idea akin to lengthening wildfire risk season out west)."}
+ 
+hotcolors <- c("Earliest day >90F" = "green4", "Latest day >90F" = "darkorange2")
+tibble(start = c(150, 160, 170, 180, 190),
+        end = c(275, 270, 265, 260, 250),
+       year = c(2022:2018)) %>%
+  mutate(start = yday(as_date(start)),
+         end = yday(as_date(end)),
+         hot = end - start)  %>%
+  ggplot(aes(x = year)) +
+  geom_point(aes(y = start, color = "Earliest day >90F")) +
+    geom_point(aes(y = end, color = "Latest day >90F")) +
+  theme_council() +
+    scale_color_manual(values = hotcolors)+
+  geom_segment(aes(x = year, xend = year, y = start, yend = end), alpha = .5) +
+  labs(x = "Year", y = "", col = "", title = "Lengthening of 'extreme heat' season")+
+  scale_y_reverse(labels=function(x) strftime(chron::chron(x), "%b %d"), n.breaks = 6) 
+
+```
+
+## Disemination 
+
+- How to engage stakeholders and provide educational opportunities around the update?
+- Plan for COW presentation? 
+- Update MN Geospatial commons data
+- Would communications folks want to be engaged?
+
+Should drought be included here? 
+
+# Game Plan
+
+1) Build GEE model to get 2022 heat data
+2) Start to link people into the story (demographics/etc)
+  - this can be done with old 2016 data too
+  - stories - this is a bigger lift, consider RCP stuff later
+3) Contextualize 2016 data
+  - how historic was 2016? or was it just good to measure (clouds, smoke impact readings in 2021)
+  - if 2022 has a similar event, has there been an expansion or contraction in the vulnerable area of our region (likely driven by development patterns, land use, etc). vulnerable = areas at risk from extreme heat.
+  - map the expansion of vulnerability, overlay with development?
+  - show rising median/mean temps (with change in other variables like eab?)
