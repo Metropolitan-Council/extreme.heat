@@ -69,6 +69,8 @@ Update StoryMap. Consider:
 
   - are there racial/economic disparities with exposure to extreme heat?
   - how are populations which are more vulnerable to extreme heat (ie youth/elders, others?) being impacted?
+  - does PUMS or ACS have information about the percent of 1 person households (and/or maybe intersecting with age; during heatwaves the message is always to check on vulnerable people, elders living alone, etc. think about the social connections/safety aspect - maybe book gives some ideas; "Heatwave a social autopsy of disaster in Chicago")
+  - what about housing tenure? are renters particularly vulnerable and/or have less agency to get cooling in primary residence?
 
 ```{r, fig.asp = .3, fig.cap = "Example plots showing how demographics intersect with extreme heat."}
 mtcars %>%
@@ -102,7 +104,7 @@ mtcars %>%
 If rising temperatures are inevitable, how are residents/cities going to adapt?
 
 - tree canopy (link with growing shade) / impervious surfaces (link with surface with purpose and/or localized flooding); **show how land use decisions impact local temperatures**
-- housing metrics from ztrax zillow data; is there an "adaptation gap" to extreme heat? (idea = systemic structural/economic/racial issues may also manifest as no cooling available to residents to mitigate extreme heat)
+- housing metrics from ztrax zillow data; is there an "adaptation gap" to extreme heat? (idea = systemic structural/economic/racial issues may also manifest as no cooling available to residents to mitigate extreme heat). with ztrax consider if we can get cooling data directly from county assessors or parcel data (and keep in mind that county-to-county might be challenging to compare.) maybe consider age of housing stock too (thinking about energy efficiency, etc.)
 
 **ADD OVERLAY MAPS** to the storymap! (kind of like how land use is there now, but try to be more explicit? think about how the data could be compelling to inform landscape architecture, etc.)
 
