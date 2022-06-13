@@ -14,13 +14,15 @@ urlcolor: blue
 library(tidyverse)
 library(lubridate)
 library(councilR)
+library(tidycensus)
 
 knitr::opts_chunk$set(
   echo = F, message = F, warning = F, results = "hide",
-  fig.pos = "H",
-  fig.width = 6,
-  dpi = 300
+  fig.pos = "H"
+  # ,fig.height = 4
+  , dpi = 300
 )
+
 `%not_in%` <- Negate(`%in%`)
 
 ```
@@ -32,122 +34,35 @@ The Metropolitan Council provides local planning assistance for communities acro
 The goal of this project is to do a major update of the data in order to better integrate the consequences of climate change into city planning and policy decisions, and ultimately help inform a more sustainable and healthier future for the Twin Cities region.  
 
 
-# Summer 2022 plan 
+# Map
 
-## Map
+Extreme heat in summer 2022. Multiple layers (heat in 2016 too)
 
-### Extreme heat in summer 2022
+## Methods
 
 - Develop code to analyze thermal sensor data from the *new* Landsat 9 satellite. I've previously explored years 2016-2021 in Landsat 8, and the July 2016 heat wave is indeed historic (and has the best data clarity across the region; little cloud/smoke cover, etc.) 
+
+## Results
 
 ```{r heatmap, fig.align = 'center', out.width = "70%", fig.cap = "Example heat map summer 2022", results='markup'}
 knitr::include_graphics(("./heatmap.png"))
 ```
 
-### Current and past data
 
-Would it be useful to have multiple layers with different dates?
-
-- 2022 heat wave (hopeful update)
-- 2016 heat wave (historic event)
-- real time (it seems like people should just use weather applications for this, but idk)
-
-## Narrative 
-
-Update StoryMap. Consider:
-
-- Cooling centers;is it possible to map them? Or have definitions become standardized? $ vs free, etc. 
-- Revisit human vulnerability! Is it possible to capture a personal/neighborhood experience of heat? EAB impacting trees and making heat more intense, cooling centers, pools/splash pads, health outcomes/impacts, grassroots efforts related to heat (green roofs, heat pumps/cooling, programs $ nonprofits providing relief). **Consider RCP program - could students do some of this qualitative data gathering?**
-- Anything with comorbidities / the study Baltimore did about heat and deaths?
-
-
-### Link demographic data to land surface temperatures to understand the social and economic *IMPACT* of extreme heat on residents
-
-- can we do this for race at the *block* level? (seems to be in [redistricting data](https://data.census.gov/cedsci/table?g=1400000US27123030100%241000000&y=2020&d=DEC%20Redistricting%20Data%20%28PL%2094-171%29))
-
-- some ideas below, [website indicates](https://metrocouncil.org/Communities/Planning/Local-Planning-Assistance/CVA/Extreme-Heat.aspx) "Human vulnerability to extreme heat is of concern for many stakeholders in the region, particularly county public health departments and agency partners." --> let's try to explicitly connect the dots!
-
-  - are there racial/economic disparities with exposure to extreme heat?
-  - how are populations which are more vulnerable to extreme heat (ie youth/elders, others?) being impacted?
-  - does PUMS or ACS have information about the percent of 1 person households (and/or maybe intersecting with age; during heatwaves the message is always to check on vulnerable people, elders living alone, etc. think about the social connections/safety aspect - maybe book gives some ideas; "Heatwave a social autopsy of disaster in Chicago")
-  - what about housing tenure? are renters particularly vulnerable and/or have less agency to get cooling in primary residence?
-
-```{r, fig.asp = .3, fig.cap = "Example plots showing how demographics intersect with extreme heat."}
-mtcars %>%
-  mutate(mpg = mpg * (-1),
-         qsec = qsec * (-1)) %>%
-  pivot_longer(names_to = "names", values_to = "values", -mpg) %>%
-  filter(names %in% c("qsec", "wt", "drat")) %>%
-  ggplot(aes(x = mpg, y = values)) + 
-  facet_wrap(~names, scales = "free") +
-  geom_point(alpha = .5) +
-  geom_smooth(fill = NA, color = colors$councilBlue, method = "lm") +
-  facet_wrap(~names,
-          scales = "free", 
-          nrow = 1, 
-          strip.position = "left",
-          labeller = as_labeller(c(qsec = str_wrap("Population with a senstive age (% under 18 or 65+)", 10), 
-                                   wt = str_wrap("Population identifying as a person of color (%)", 10),
-                                   drat = str_wrap("Mean income ($)", 10)))) +
-  theme_council_open() +
-  theme(strip.placement = "outside") +
-  labs(x = "Land surface temperature during (date) heatwave") +
-  theme(axis.text = element_blank(),
-        axis.title.y = element_blank(),
-        strip.text.y.left = element_text(angle = 0))
-```
-
-
-
-### Link variables about the built and natural environments to understand *ADAPTATION* strategies for extreme heat 
-
-If rising temperatures are inevitable, how are residents/cities going to adapt?
-
-- tree canopy (link with growing shade) / impervious surfaces (link with surface with purpose and/or localized flooding); **show how land use decisions impact local temperatures**
-- housing metrics from ztrax zillow data; is there an "adaptation gap" to extreme heat? (idea = systemic structural/economic/racial issues may also manifest as no cooling available to residents to mitigate extreme heat). with ztrax consider if we can get cooling data directly from county assessors or parcel data (and keep in mind that county-to-county might be challenging to compare.) maybe consider age of housing stock too (thinking about energy efficiency, etc.)
-
-**ADD OVERLAY MAPS** to the storymap! (kind of like how land use is there now, but try to be more explicit? think about how the data could be compelling to inform landscape architecture, etc.)
-
-```{r, fig.asp = .3, fig.cap="Example plots showing how the built/natural environments interact with extreme heat."}
-mtcars %>%
-  mutate(mpg = mpg * (-1),
-         qsec = qsec * (-1),
-         wt2 = wt,
-         wt = wt * (-1)) %>%
-  pivot_longer(names_to = "names", values_to = "values", -mpg) %>%
-  filter(names %in% c("qsec", "wt", "wt2")) %>%
-  ggplot(aes(x = mpg, y = values)) + 
-  facet_wrap(~names, scales = "free") +
-  geom_point(alpha = .5) +
-  geom_smooth(fill = NA, color = colors$councilBlue, method = "lm") +
-  facet_wrap(~names,
-          scales = "free", 
-          nrow = 1, 
-          strip.position = "left",
-          labeller = as_labeller(c(qsec = str_wrap("Residences with air conditioning (%)", 10), 
-                                   # wt = str_wrap("Owner occupied residences (%)", 20)
-                                   wt = str_wrap("Impervious surfaces (%)", 10),
-                                   wt2 = str_wrap("Tree canopy in 2021 (%)", 10)
-                                   ))) +
-  theme_council_open() +
-  theme(strip.placement = "outside") +
-  labs(x = "Land surface temperature during (date) heatwave") +
-  theme(axis.text = element_blank(),
-        axis.title.y = element_blank(),
-        strip.text.y.left = element_text(angle = 0))
-```
-
-### Anazlyze growing *RISK* of extreme heat from historic data
+# Changing *RISK* of extreme heat
 
 - analyze past trends of extreme heat; show possible futures too?? (link with greenhouse gas work)
 
+## Methods
+
+## Results
 
 ```{r warmstripes, fig.align = 'center', out.width = "70%", fig.asp = .3, fig.cap = "Example past temperature trends; annual maximum", results='markup'}
 knitr::include_graphics(("./warmingstripes.png"))
 ```
 
 
-```{r, fig.asp = .5, fig.cap = "Example trends showing a growing risk from extreme heat"}
+```{r, fig.asp = .9, fig.cap = "Example trends showing a growing risk from extreme heat"}
 mtcars %>%
   mutate(mpg = mpg * (-1),
          qsec = qsec * (-1),
@@ -196,7 +111,130 @@ tibble(start = c(150, 160, 170, 180, 190),
 
 ```
 
-## Disemination 
+# Social and economic *IMPACT* of extreme heat on residents
+
+Our [website indicates](https://metrocouncil.org/Communities/Planning/Local-Planning-Assistance/CVA/Extreme-Heat.aspx) "Human vulnerability to extreme heat is of concern for many stakeholders in the region, particularly county public health departments and agency partners." Let's explicitly connect the dots between demographic data and land surface temperature!
+
+## Methods
+
+Data sources:
+
+- 2020-2016 American Community Survey
+- 2020 decennial census
+
+
+## Results
+
+Across our region, certain populations have disproportionate exposure to extreme heat (Figure \@ref(fig:demo-fig)). In particular:
+
+- **Age:** Neither younger (under age 18) or older (65 or above) age groups who have increased sensitivity to extreme heat appear to be at an increased risk of exposure.
+- **Household size:** People are more likely to be living alone (household size of 1) in areas with greater exposure to extreme heat. Social cohesion/connections can impact human vulnerability to extreme heat. From a safety perspective, people are always advised to check in on family and friends living alone during heat waves. Living alone may put people at an elevated risk. Fortunately, it does not seem that elders living alone have greater risk.
+- **Income:** There are disparities in exposure to extreme heat with income. Lower income areas (median household income) tend to be exposed to hotter temperatures. Areas where a larger share of residents make less than 185% of the poverty rate are also exposed to hotter temperatures.
+- **Language:** Hotter areas have greater percentages of residents who have limited English proficiency. This indicates the value of advertising cooling centers, communicating about the risk of extreme heat, or other things in multiple languages.
+- **Race:** Areas where a greater percent of residents identify as a person of color tend to be hotter. Black and Hispanic residents seem to be disproportionately impacted. 
+- **Tenure:** Areas were more residents are renters are disproportionately hotter. This may indicate the need for particular types of mitigation strategies if renters have less agency to make structural (i.e. installing air conditioning units) or environmental (i.e., planting trees or landscaping interventions) changes to reduce heat exposure.
+
+<!-- does PUMS or ACS have information about the percent of 1 person households (and/or maybe intersecting with age; during heatwaves the message is always to check on vulnerable people, elders living alone, etc. think about the social connections/safety aspect - maybe book gives some ideas; "Heatwave a social autopsy of disaster in Chicago") -->
+  
+
+```{r demo-fig, fig.asp = 1, fig.cap = "Linking demographic variables with exposure to extreme land surface temperatures during a heat wave."}
+process_demos <- FALSE
+source("./R/demographics.R")
+
+process_heat <- FALSE
+source("./R/heat.R")
+
+  
+demographics %>%
+  full_join(heat) %>%
+  filter(!is.na(heat2016), !is.na(estimate)) %>%
+  ggplot(aes(x = heat2016, y = estimate)) +
+  geom_point(alpha = .1, pch = 21, size = .5) +
+  facet_wrap(~name, scales = "free_y"
+             ,labeller=label_wrap_gen(width = 20)#as_labeller(var_names)
+             ) +
+  theme_council_open() +
+  geom_smooth(fill = NA, color = councilR::colors$councilBlue) +
+  labs(x = "Average land temperature during 2016 heat wave",
+       y = "",
+       caption = "Sources: 2020 decennial census, 2016-2020 American Community Survey, 2016 Landsat") +
+  theme(axis.title.x = element_text(size = 6),
+        strip.text.x = element_text(size = 6),
+        strip.text.y = element_text(size = 6),
+        axis.text.y = element_text(size = 5),
+        axis.text.x = element_text(size = 5),
+        plot.caption = element_text(size = 5))
+
+```
+
+# *MITIGATION* and *ADAPTATION* strategies for extreme heat 
+
+If rising temperatures are inevitable, how are residents/cities going to adapt/mitigate impact? Aka Link variables about the built and natural environments
+
+- tree canopy (link with growing shade) / impervious surfaces (link with surface with purpose and/or localized flooding); **show how land use decisions impact local temperatures**
+- housing metrics from ztrax zillow data; is there an "adaptation gap" to extreme heat? (idea = systemic structural/economic/racial issues may also manifest as no cooling available to residents to mitigate extreme heat). with ztrax consider if we can get cooling data directly from county assessors or parcel data (and keep in mind that county-to-county might be challenging to compare.) maybe consider age of housing stock too (thinking about energy efficiency, etc.)
+
+**ADD OVERLAY MAPS** to the storymap! (kind of like how land use is there now, but try to be more explicit? think about how the data could be compelling to inform landscape architecture, etc.)
+
+## Methods
+
+## Results
+
+```{r, fig.asp = .3, fig.cap="Example plots showing how the built/natural environments interact with extreme heat."}
+mtcars %>%
+  mutate(mpg = mpg * (-1),
+         qsec = qsec * (-1),
+         wt2 = wt,
+         wt = wt * (-1)) %>%
+  pivot_longer(names_to = "names", values_to = "values", -mpg) %>%
+  filter(names %in% c("qsec", "wt", "wt2")) %>%
+  ggplot(aes(x = mpg, y = values)) + 
+  facet_wrap(~names, scales = "free") +
+  geom_point(alpha = .5) +
+  geom_smooth(fill = NA, color = colors$councilBlue, method = "lm") +
+  facet_wrap(~names,
+          scales = "free", 
+          nrow = 1, 
+          strip.position = "left",
+          labeller = as_labeller(c(qsec = str_wrap("Residences with air conditioning (%)", 10), 
+                                   # wt = str_wrap("Owner occupied residences (%)", 20)
+                                   wt = str_wrap("Impervious surfaces (%)", 10),
+                                   wt2 = str_wrap("Tree canopy in 2021 (%)", 10)
+                                   ))) +
+  theme_council_open() +
+  theme(strip.placement = "outside") +
+  labs(x = "Land surface temperature during (date) heatwave") +
+  theme(axis.text = element_blank(),
+        axis.title.y = element_blank(),
+        strip.text.y.left = element_text(angle = 0))
+```
+
+
+# Narrative 
+
+Update StoryMap. Consider UofM RCP program - could students do some of this qualitative data gathering? 
+
+Idea: is it possible to capture a personal/neighborhood experience of heat? **Human vulnerability**
+
+## Cooling centers
+
+Is it possible to map them? Or have definitions become standardized? $ vs free, etc. 
+Splash pads?
+
+## Landscaping
+
+EAB, commercial landscaping, etc. 
+
+## Health outcomes
+
+- Anything with co-morbidities / the study Baltimore did about heat and deaths?
+
+## Grassroots efforts
+
+grassroots efforts related to heat (green roofs, heat pumps/cooling, programs $ nonprofits providing relief, building social connections/safety in extreme heat)
+
+
+# Disemination 
 
 - How to engage stakeholders and provide educational opportunities around the update?
 - Plan for COW presentation? 
