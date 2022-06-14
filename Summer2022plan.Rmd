@@ -57,12 +57,17 @@ knitr::include_graphics(("./heatmap.png"))
 
 ## Results
 
-```{r warmstripes, fig.align = 'center', out.width = "70%", fig.asp = .3, fig.cap = "Example past temperature trends; annual maximum", results='markup'}
+```{r warmstripes}
+#| fig.cap = "Idea to show past trends",
+#| results='markup', 
+#| out.width= "3in",  
+#| out.extra='style="float:right"', 
+#| fig.align='right'
 knitr::include_graphics(("./warmingstripes.png"))
 ```
 
 
-```{r, fig.asp = .9, fig.cap = "Example trends showing a growing risk from extreme heat"}
+```{r, fig.asp = .4, fig.cap = "Example trends showing a growing risk from extreme heat"}
 mtcars %>%
   mutate(mpg = mpg * (-1),
          qsec = qsec * (-1),
@@ -91,7 +96,7 @@ mtcars %>%
   # geom_hline(aes(yintercept = -13))
 ```
 
-```{r, fig.asp = .3, fig.cap = "Example plot showing a lengthening season with extreme heat risk (terminology/idea akin to lengthening wildfire risk season out west)."}
+```{r, fig.asp = .4, fig.cap = "Example plot showing a lengthening season with extreme heat risk (terminology/idea akin to lengthening wildfire risk season out west)."}
  
 hotcolors <- c("Earliest day >90F" = "green4", "Latest day >90F" = "darkorange2")
 tibble(start = c(150, 160, 170, 180, 190),
@@ -117,55 +122,149 @@ Our [website indicates](https://metrocouncil.org/Communities/Planning/Local-Plan
 
 ## Methods
 
-Data sources:
+The demographic data comes from a combination of 2020 decennial census and 2016-2020 five-year American Community Survey (ACS) estimates. The 2020 decennial census is a full count of the population, but has few variables (currently limited to race and total population counts). On the other hand, the ACS five-year estimates offer more detailed demographic variables (for instance income, age, and language variables), but reflects only a sample (survey) of the total population.
 
-- 2020-2016 American Community Survey
-- 2020 decennial census
+The 2020 decennial census data was accessed from the [MN Geospatial Commons](https://gisdata.mn.gov/dataset/us-mn-state-metc-society-census2020population) and used only for race variables. The 2016-2020 ACS data was accessed using the [tidycensus](https://github.com/walkerke/tidycensus) wrapper for the [Census Bureau's API](https://www.census.gov/programs-surveys/acs/data/data-via-api.html). 
+
+The heat data comes from Landsat 8 thermal infrared sensor data measured on July, 22 2016. **Ideally this will be updated to 2022 data!**
 
 
 ## Results
 
-Across our region, certain populations have disproportionate exposure to extreme heat (Figure \@ref(fig:demo-fig)). In particular:
+Across our region, certain populations have disproportionate exposure to extreme heat. In particular:
 
-- **Age:** Neither younger (under age 18) or older (65 or above) age groups who have increased sensitivity to extreme heat appear to be at an increased risk of exposure.
-- **Household size:** People are more likely to be living alone (household size of 1) in areas with greater exposure to extreme heat. Social cohesion/connections can impact human vulnerability to extreme heat. From a safety perspective, people are always advised to check in on family and friends living alone during heat waves. Living alone may put people at an elevated risk. Fortunately, it does not seem that elders living alone have greater risk.
-- **Income:** There are disparities in exposure to extreme heat with income. Lower income areas (median household income) tend to be exposed to hotter temperatures. Areas where a larger share of residents make less than 185% of the poverty rate are also exposed to hotter temperatures.
-- **Language:** Hotter areas have greater percentages of residents who have limited English proficiency. This indicates the value of advertising cooling centers, communicating about the risk of extreme heat, or other things in multiple languages.
-- **Race:** Areas where a greater percent of residents identify as a person of color tend to be hotter. Black and Hispanic residents seem to be disproportionately impacted. 
-- **Tenure:** Areas were more residents are renters are disproportionately hotter. This may indicate the need for particular types of mitigation strategies if renters have less agency to make structural (i.e. installing air conditioning units) or environmental (i.e., planting trees or landscaping interventions) changes to reduce heat exposure.
-
-<!-- does PUMS or ACS have information about the percent of 1 person households (and/or maybe intersecting with age; during heatwaves the message is always to check on vulnerable people, elders living alone, etc. think about the social connections/safety aspect - maybe book gives some ideas; "Heatwave a social autopsy of disaster in Chicago") -->
-  
-
-```{r demo-fig, fig.asp = 1, fig.cap = "Linking demographic variables with exposure to extreme land surface temperatures during a heat wave."}
+```{r process-demographics}
 process_demos <- FALSE
 source("./R/demographics.R")
 
 process_heat <- FALSE
 source("./R/heat.R")
 
-  
-demographics %>%
-  full_join(heat) %>%
-  filter(!is.na(heat2016), !is.na(estimate)) %>%
-  ggplot(aes(x = heat2016, y = estimate)) +
-  geom_point(alpha = .1, pch = 21, size = .5) +
-  facet_wrap(~name, scales = "free_y"
-             ,labeller=label_wrap_gen(width = 20)#as_labeller(var_names)
-             ) +
+
+df <- demographics %>% full_join(heat) %>%
+  separate(name, sep = "; ", into = c("type", "other"), remove = F) %>%
+  mutate(source = case_when(type ==  "Race" ~ "Sources: 2020 decennial census;\nJuly 22, 2016 Landsat 8 thermal infared sensor", 
+                            TRUE ~ "Sources: 2016-2020 American Community Survey;\nJuly 22, 2016 Landsat 8 thermal infared sensor"),
+         labels = case_when(variable %in% c("income_median", "income_percapita") ~ "dollar",
+                            TRUE ~ "percent"),
+         height = case_when(type == "Race" ~ 6,
+                            TRUE ~ 3)) %>%
+  filter(!is.na(name), variable != "income_below185pov_percent") %>% 
+  # group_by(type) %>% mutate(test = nlevels())
+  group_split(type)  
+
+
+df %>% 
+  purrr::map(~ggsave(paste0("figs/", first(.$type),'.png'), height = c(3, 6), width = 6, units = "in", dpi = 200,
+              ggplot(., aes(y = estimate, x = heat2016))+
+      geom_point(alpha = .1, pch = 21, size = .5) +
+                facet_wrap(~.$name,
+                           # scales = "free_y",
+                           labeller = label_wrap_gen((width = 25))) +
   theme_council_open() +
   geom_smooth(fill = NA, color = councilR::colors$councilBlue) +
+    # scale_y_continuous(labels = scales::comma) +
+  scale_y_continuous(labels = if (first(.$labels == "dollar")) scales::dollar else scales::percent) +
+    scale_x_continuous(labels = function(x) paste0(x, "°F"), breaks = seq(80, 100, by = 5), limits = c(80, 105), expand = c(.01, .01))+
+  # scale_y_continuous(labels = ~ if (any(.$.x > 1e3)) scales::dollar(.$.x) else .$.x) +
   labs(x = "Average land temperature during 2016 heat wave",
        y = "",
-       caption = "Sources: 2020 decennial census, 2016-2020 American Community Survey, 2016 Landsat") +
-  theme(axis.title.x = element_text(size = 6),
-        strip.text.x = element_text(size = 6),
-        strip.text.y = element_text(size = 6),
-        axis.text.y = element_text(size = 5),
-        axis.text.x = element_text(size = 5),
-        plot.caption = element_text(size = 5))
-
+       caption = str_wrap(paste0(first(.$source)), width = 60))
+       # caption = "Sources: 2020 decennial census, 2016-2020 American Community Survey, 2016 Landsat") #+
+  # theme(axis.title.x = element_text(size = ),
+  #       strip.text.x = element_text(size = 6),
+  #       strip.text.y = element_text(size = 6),
+  #       axis.text.y = element_text(size = 5),
+  #       axis.text.x = element_text(size = 5),
+  #       plot.caption = element_text(size = 5))
+  ))
 ```
+
+### Age
+
+Neither younger (under age 18) or older (65 or above) age groups who have increased sensitivity to extreme heat appear to be at an increased risk of exposure (Figure \@ref(fig:age-fig)).
+
+```{r age-fig}
+#| fig.cap = "Relationship between resident age and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region. The blue line shows the trend line from a generalized additive model.",
+#| results='markup', 
+#| out.width= "6in",  
+#| out.extra='style="float:right"', 
+#| fig.align='right'
+knitr::include_graphics("./figs/Age.png")
+```
+
+
+### Communications (language and internet)
+
+Hotter areas have greater percentages of residents who do not speak English at home. Hotter areas also have greater percentages of residents without internet at home. This indicates the value of communicating about heat warnings and mitigation strategies (e.g., location and hours of cooling centers) in multiple languages and via multiple platforms (Figure \@ref(fig:lang-fig)). 
+
+
+
+```{r lang-fig}
+#| fig.cap = "Relationship between languages spoken by residents and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region. The blue line shows the trend line from a generalized additive model.",
+#| results='markup', 
+#| out.width= "6in",  
+#| out.extra='style="float:right"', 
+#| fig.align='right'
+knitr::include_graphics("./figs/Communications.png")
+```
+
+### Household size
+
+People are more likely to be living alone (household size of 1) in areas with greater exposure to extreme heat (Figure \@ref(fig:hh-fig)). Social cohesion/connections can impact human vulnerability to extreme heat. From a safety perspective, people are always advised to check in on family and friends living alone during heat waves. Living alone may put people at an elevated risk. Fortunately, it does not seem that elders living alone have greater risk.
+
+```{r hh-fig}
+#| fig.cap = "Relationship between household size and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region. The blue line shows the trend line from a generalized additive model.",
+#| results='markup', 
+#| out.width= "6in",  
+#| out.extra='style="float:right"', 
+#| fig.align='right'
+knitr::include_graphics("./figs/Households.png")
+```
+
+### Income
+
+There are disparities in exposure to extreme heat with income. Lower income areas (median household income) tend to be exposed to hotter temperatures. Areas where a larger share of residents make less than 185% of the poverty rate are also exposed to hotter temperatures (Figure \@ref(fig:income-fig)).
+
+```{r income-fig}
+#| fig.cap = "Relationship between income and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region. The blue line shows the trend line from a generalized additive model.",
+#| results='markup', 
+#| out.width= "6in",  
+#| out.extra='style="float:right"', 
+#| fig.align='right'
+knitr::include_graphics("./figs/Income.png")
+```
+
+
+### Race
+
+Areas where a greater percent of residents identify as a person of color tend to be hotter. Black and Hispanic residents seem to be disproportionately impacted (Figure \@ref(fig:race-fig)).
+
+
+```{r race-fig}
+#| fig.cap = "Relationship between resident's racial identity and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region. The blue line shows the trend line from a generalized additive model.",
+#| results='markup', 
+#| out.width= "6in",  
+#| out.extra='style="float:right"', 
+#| fig.align='right'
+knitr::include_graphics("./figs/Race.png")
+```
+
+### Tenure
+
+Areas were more residents are renters are disproportionately hotter. This may indicate the need for particular types of mitigation strategies if renters have less agency to make structural (i.e., installing air conditioning units) or environmental (i.e., planting trees or landscaping interventions) changes to reduce heat exposure (Figure \@ref(fig:tenure-fig)).
+
+
+```{r tenure-fig}
+#| fig.cap = "Relationship between resident housing tenure and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region. The blue line shows the trend line from a generalized additive model.",
+#| results='markup', 
+#| out.width= "6in",  
+#| out.extra='style="float:right"', 
+#| fig.align='right'
+knitr::include_graphics("./figs/Tenure.png")
+```
+
+
 
 # *MITIGATION* and *ADAPTATION* strategies for extreme heat 
 

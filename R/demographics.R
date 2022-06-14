@@ -8,6 +8,8 @@ if (process_demos == TRUE) {
   #######
   # A portion of these data come from the tidycensus package, rather than the geospatial commons. I want more/different variables, and this seems like the easiest way to do this currently.
   
+  library(tidycensus)
+  
   # You will need an API key from Census:
   # - [Request an api key](https://api.census.gov/data/key_signup.html)
   # - Enter in the console: `usethis::edit_r_environ()`
@@ -40,19 +42,32 @@ if (process_demos == TRUE) {
              moe = summoe)
   }
   
+  # I'd like to make this work, but am having a hard time :/ 
+  # fxn_calc_percent <- function(x, .num, .denom){
+  #   x %>%
+  #     mutate("estimate.{{.num}}_percent" :=# x$[[(paste0("estimate.", .num))]])
+  #   # paste0("estimate.", (.num), "_percent") = paste0("estimate.", (.num)) / paste0("estimate.", (.denom))
+  #   # paste0("moe.", !!enquo(.num), "_percent") = moe_ratio(num = paste0("estimate.", !!enquo(.num)), denom = paste0("estimate.", !!.enquo(.denom)),
+  #   #                                    moe_num = paste0("moe.", !!enquo(.num)), moe_denom = paste0("moe.", !!.enquo(.denom)))
+  # }
+
+
   
-  
-  acsapi_sums <- fxn_sum_acs(.vars = c(paste0("B01001_00", c(3:6)), #under18 m
+   acs_age <- fxn_sum_acs(.vars = c(paste0("B01001_00", c(3:6)), #under18 m
                                      paste0("B01001_0", c(27:30)), #under18 f
                                      paste0("B01001_0", c(20:25, 44:49)) #over 65m, f
                                      ),
                            .name = "age_sensitive") %>%
-    bind_rows(
-      fxn_sum_acs(.vars = c(paste0("C17002_00", c(2:6))),
+     bind_rows(fxn_sum_acs(.vars = c(paste0("B01001_00", c(3:6)), #under18 m
+                                     paste0("B01001_0", c(27:30))), #under18 f
+                           .name = "age_under18")) %>%
+     bind_rows(fxn_sum_acs(.vars = c(paste0("B01001_0", c(20:25, 44:49))), #over 65m, f
+                                     .name = "age_65up"))
+   
+   acs_income <- fxn_sum_acs(.vars = c(paste0("C17002_00", c(2:6))),
                   .name = "income_below185pov")
-    )
   
-
+  acsapi_sums <- bind_rows(acs_age, acs_income)
   
   acsapi <- get_acs(
     geography = "block group",
@@ -73,7 +88,13 @@ if (process_demos == TRUE) {
       lang_eng = "C16002_002",
       
       tenure_total = "B25003_001",
-      tenure_renter = "B25003_003"
+      tenure_renter = "B25003_003",
+      tenure_contractrent = "B25058_001", #Gross rent is similar to selected monthly owner costs. It is the sum of contract rent and the average cost of the utilities (electricity, gas, and water and sewer) and fuel (oil, coal, kerosene, wood, etc).
+      tenure_grossrent = "B25064_001",
+      
+      comm_total = "B28002_001",
+      comm_nointernet = "B28002_013",
+      comm_cellonly = "B28002_006"
     ),
     survey = "acs5",
     state = "MN",
@@ -90,6 +111,9 @@ if (process_demos == TRUE) {
       names_sep = "."
     ) %>%
     mutate(
+      
+      estimate.tenure_utilitycost = estimate.tenure_grossrent - estimate.tenure_contractrent,
+      
       estimate.hh_1person_percent = estimate.hh_1person / estimate.hh_total,
       moe.hh_1person_percent = moe_ratio(num = estimate.hh_1person, denom = estimate.hh_total, 
                                          moe_num = moe.hh_1person, moe_denom = moe.hh_total),
@@ -108,7 +132,23 @@ if (process_demos == TRUE) {
       
       estimate.age_sensitive_percent = estimate.age_sensitive / estimate.pop_total,
       moe.age_sensitive_percent = moe_ratio(num = estimate.age_sensitive, denom = estimate.pop_total,
-                                          moe_num = moe.age_sensitive, moe_denom = moe.pop_total),
+                                            moe_num = moe.age_sensitive, moe_denom = moe.pop_total),
+
+      estimate.age_under18_percent = estimate.age_under18 / estimate.pop_total,
+      moe.age_under18_percent = moe_ratio(num = estimate.age_under18, denom = estimate.pop_total,
+                                            moe_num = moe.age_under18, moe_denom = moe.pop_total),
+
+      estimate.age_65up_percent = estimate.age_65up / estimate.pop_total,
+      moe.age_65up_percent = moe_ratio(num = estimate.age_65up, denom = estimate.pop_total,
+                                          moe_num = moe.age_65up, moe_denom = moe.pop_total),
+      
+      estimate.comm_nointernet_percent = estimate.comm_nointernet / estimate.comm_total,
+      moe.comm_nointernet_percent = moe_ratio(num = estimate.comm_nointernet, denom = estimate.comm_total,
+                                            moe_num = moe.comm_nointernet, moe_denom = moe.comm_total),
+      
+      estimate.comm_cellonly_percent = estimate.comm_cellonly / estimate.comm_total,
+      moe.comm_cellonly_percent = moe_ratio(num = estimate.comm_cellonly, denom = estimate.comm_total,
+                                            moe_num = moe.comm_cellonly, moe_denom = moe.comm_total),
       
       estimate.income_below185pov_percent = estimate.income_below185pov / estimate.income_povstatus,
       moe.income_below185pov_percent = moe_ratio(num = estimate.income_below185pov, denom = estimate.income_povstatus,
@@ -122,7 +162,8 @@ if (process_demos == TRUE) {
     # mutate(flag = if_else(estimate - moe <= 0, 1, NA_real_)) %>% #remove instances where moe overlaps with zero; ACTUALLY, what to do when the percent IS zero?!?! (percent english, or something)
     # filter(is.na(flag),) %>% select(-flag) %>%
     filter(str_detect(variable, "percent|income")) %>%
-    filter(variable %not_in% c("income_povstatus", "income_below185pov"))
+    filter(variable %not_in% c("income_povstatus", "income_below185pov",
+                               "tenure_grossrent", "tenure_contractrent"))
     # filter(!str_detect(variable, "_total"), #remove variables used only to calculate percentages
     #        variable %not_in% c("age_sensitive",
     #                            "income_pov_status", "income_below185pov",
@@ -207,13 +248,18 @@ if (process_demos == TRUE) {
   #### Synthesis
   #######
   var_names <- tribble(~variable, ~name,
-    'age_sensitive_percent', "Age; % in sensitive group (<18 or 65+)",
+                       'age_under18_percent', "Age; % under 18",
+                       'age_65up_percent', "Age; % 65 and up",
+                       'age_sensitive_percent', "Age; % in sensitive group (<18 or 65+)",
     "hh_1person_percent", "Households; % 1-person households",
     "hhage_1personover65_percent", "Households; % 1-person households age 65+",
     "tenure_renter_percent", "Tenure; renter %",
+    "tenure_utilitycost", "Tenure; median renter utility costs",
     "income_percapita", "Income; per capita",
     "income_below185pov_percent", "Income; % under 185% poverty rate",
-    "lang_eng_percent", "Language; % speaking English at home",
+    "comm_cellonly_percent", "Communications; % accessing internet via cellphone only",
+    "comm_nointernet_percent", "Communications; % without internet at home",
+    "lang_eng_percent", "Communications; % speaking English at home",
     "income_median", "Income; median household",
     "pamindnh", "Race; % American Indian",
     "pasiannh", "Race; % Asian",
