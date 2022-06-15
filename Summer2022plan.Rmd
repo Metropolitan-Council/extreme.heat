@@ -141,43 +141,85 @@ process_heat <- FALSE
 source("./R/heat.R")
 
 
+# # this works for purrring/mapping everything
+# df <- demographics %>% full_join(heat) %>%
+#   separate(name, sep = "; ", into = c("type", "other"), remove = F) %>%
+#   mutate(source = case_when(type ==  "Race" ~ "Sources: 2020 decennial census;\nJuly 22, 2016 Landsat 8 thermal infared sensor",
+#                             TRUE ~ "Sources: 2016-2020 American Community Survey;\nJuly 22, 2016 Landsat 8 thermal infared sensor"),
+#          labels = case_when(variable %in% c("income_median", "income_percapita") ~ "dollar",
+#                             TRUE ~ "percent"),
+#          height = case_when(type == "Race" ~ 6,
+#                             TRUE ~ 3)) %>%
+#   filter(!is.na(name), variable != "income_below185pov_percent") %>%
+#   # group_by(type) %>% mutate(test = nlevels())
+#   group_split(type)
+# 
+# 
+# df %>%
+#   purrr::map(~ggsave(paste0("figs/", first(.$type),'.png'), height = 3, width = 6, units = "in", dpi = 200,
+#               ggplot(., aes(y = estimate, x = heat2016))+
+#       geom_point(alpha = .1, pch = 21, size = .5) +
+#                 facet_wrap(~.$name,
+#                            scales = "free_y",
+#                            labeller = label_wrap_gen((width = 25))) +
+#   theme_council_open() +
+#   geom_smooth(fill = NA, color = councilR::colors$councilBlue) +
+#     # scale_y_continuous(labels = scales::comma) +
+#   scale_y_continuous(labels = if (any(.$labels == "dollar")) scales::dollar else scales::percent) +
+#     scale_x_continuous(labels = function(x) paste0(x, "°F"), breaks = seq(80, 100, by = 5), limits = c(80, 105), expand = c(.01, .01))+
+#   # scale_y_continuous(labels = ~ if (any(.$.x > 1e3)) scales::dollar(.$.x) else .$.x) +
+#   labs(x = "Average land temperature during 2016 heat wave",
+#        y = "",
+#        caption = str_wrap(paste0(first(.$source)), width = 60))
+#        # caption = "Sources: 2020 decennial census, 2016-2020 American Community Survey, 2016 Landsat") #+
+#   # theme(axis.title.x = element_text(size = ),
+#   #       strip.text.x = element_text(size = 6),
+#   #       strip.text.y = element_text(size = 6),
+#   #       axis.text.y = element_text(size = 5),
+#   #       axis.text.x = element_text(size = 5),
+#   #       plot.caption = element_text(size = 5))
+#   ))
+
+# # this works for running a function on each variable type
 df <- demographics %>% full_join(heat) %>%
   separate(name, sep = "; ", into = c("type", "other"), remove = F) %>%
-  mutate(source = case_when(type ==  "Race" ~ "Sources: 2020 decennial census;\nJuly 22, 2016 Landsat 8 thermal infared sensor", 
+  mutate(source = case_when(type ==  "Race" ~ "Sources: 2020 decennial census;\nJuly 22, 2016 Landsat 8 thermal infared sensor",
                             TRUE ~ "Sources: 2016-2020 American Community Survey;\nJuly 22, 2016 Landsat 8 thermal infared sensor"),
          labels = case_when(variable %in% c("income_median", "income_percapita") ~ "dollar",
                             TRUE ~ "percent"),
          height = case_when(type == "Race" ~ 6,
                             TRUE ~ 3)) %>%
-  filter(!is.na(name), variable != "income_below185pov_percent") %>% 
+  filter(!is.na(name), variable != "income_below185pov_percent")# %>%
   # group_by(type) %>% mutate(test = nlevels())
-  group_split(type)  
+  # group_split(type)
 
+heat_demo_plot <- function(x) {
+  x %>%
+    ggplot(aes(y = estimate, x = heat2016)) +
+    geom_point(alpha = .1,
+               pch = 21,
+               size = .5) +
+    facet_wrap( ~ name,
+                # scales = "free_y",
+                labeller = label_wrap_gen((width = 25))) +
+    theme_council_open() +
+    geom_smooth(fill = NA, color = councilR::colors$councilBlue) +
+    scale_x_continuous(
+      labels = function(x)
+        paste0(x, "°F"),
+      breaks = seq(80, 100, by = 5),
+      limits = c(80, 105),
+      expand = c(.01, .01)
+    ) +
+    labs(x = "Average land temperature during 2016 heat wave",
+         y = "",
+         caption = str_wrap(paste0(first(x$source)), width = 60))
+}
 
-df %>% 
-  purrr::map(~ggsave(paste0("figs/", first(.$type),'.png'), height = c(3, 6), width = 6, units = "in", dpi = 200,
-              ggplot(., aes(y = estimate, x = heat2016))+
-      geom_point(alpha = .1, pch = 21, size = .5) +
-                facet_wrap(~.$name,
-                           # scales = "free_y",
-                           labeller = label_wrap_gen((width = 25))) +
-  theme_council_open() +
-  geom_smooth(fill = NA, color = councilR::colors$councilBlue) +
-    # scale_y_continuous(labels = scales::comma) +
-  scale_y_continuous(labels = if (first(.$labels == "dollar")) scales::dollar else scales::percent) +
-    scale_x_continuous(labels = function(x) paste0(x, "°F"), breaks = seq(80, 100, by = 5), limits = c(80, 105), expand = c(.01, .01))+
-  # scale_y_continuous(labels = ~ if (any(.$.x > 1e3)) scales::dollar(.$.x) else .$.x) +
-  labs(x = "Average land temperature during 2016 heat wave",
-       y = "",
-       caption = str_wrap(paste0(first(.$source)), width = 60))
-       # caption = "Sources: 2020 decennial census, 2016-2020 American Community Survey, 2016 Landsat") #+
-  # theme(axis.title.x = element_text(size = ),
-  #       strip.text.x = element_text(size = 6),
-  #       strip.text.y = element_text(size = 6),
-  #       axis.text.y = element_text(size = 5),
-  #       axis.text.x = element_text(size = 5),
-  #       plot.caption = element_text(size = 5))
-  ))
+filter(df, type == "Race") %>% 
+  heat_demo_plot() +
+  scale_y_continuous(labels = scales::percent)
+
 ```
 
 ### Age
@@ -189,8 +231,11 @@ Neither younger (under age 18) or older (65 or above) age groups who have increa
 #| results='markup', 
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
-#| fig.align='right'
-knitr::include_graphics("./figs/Age.png")
+#| fig.align='right',
+#| fig.asp = .6
+filter(df, type == "Age") %>% 
+  heat_demo_plot() +
+  scale_y_continuous(labels = scales::percent)
 ```
 
 
@@ -205,8 +250,11 @@ Hotter areas have greater percentages of residents who do not speak English at h
 #| results='markup', 
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
-#| fig.align='right'
-knitr::include_graphics("./figs/Communications.png")
+#| fig.align='right',
+#| fig.asp = .6
+filter(df, type == "Communications") %>% 
+  heat_demo_plot() +
+  scale_y_continuous(labels = scales::percent)
 ```
 
 ### Household size
@@ -218,8 +266,11 @@ People are more likely to be living alone (household size of 1) in areas with gr
 #| results='markup', 
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
-#| fig.align='right'
-knitr::include_graphics("./figs/Households.png")
+#| fig.align='right',
+#| fig.asp = .6
+filter(df, type == "Households") %>% 
+  heat_demo_plot() +
+  scale_y_continuous(labels = scales::percent)
 ```
 
 ### Income
@@ -231,8 +282,11 @@ There are disparities in exposure to extreme heat with income. Lower income area
 #| results='markup', 
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
-#| fig.align='right'
-knitr::include_graphics("./figs/Income.png")
+#| fig.align='right',
+#| fig.asp = .6
+filter(df, type == "Income") %>% 
+  heat_demo_plot() +
+  scale_y_continuous(labels = scales::dollar)
 ```
 
 
@@ -247,12 +301,16 @@ Areas where a greater percent of residents identify as a person of color tend to
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
 #| fig.align='right'
-knitr::include_graphics("./figs/Race.png")
+filter(df, type == "Race") %>% 
+  heat_demo_plot() +
+  scale_y_continuous(labels = scales::percent)
 ```
 
 ### Tenure
 
 Areas were more residents are renters are disproportionately hotter. This may indicate the need for particular types of mitigation strategies if renters have less agency to make structural (i.e., installing air conditioning units) or environmental (i.e., planting trees or landscaping interventions) changes to reduce heat exposure (Figure \@ref(fig:tenure-fig)).
+
+Interestingly, the median utility cost for renters is lower in areas which are hotter. There may be some confounding factors going on however. For instance, utility costs may be low if some options for heating or cooling are not available (utility cost cannot be parsed by heating or cooling costs), and utility cost may be a function of preferences rather than energy efficiency. 
 
 
 ```{r tenure-fig}
@@ -260,8 +318,15 @@ Areas were more residents are renters are disproportionately hotter. This may in
 #| results='markup', 
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
-#| fig.align='right'
-knitr::include_graphics("./figs/Tenure.png")
+#| fig.align='right',
+#| fig.asp = .6
+# knitr::include_graphics("./figs/Tenure.png")
+filter(df, type == "Tenure") %>% 
+  heat_demo_plot() +
+    facet_wrap( ~ name,
+                # scales = "free_y",
+                labeller = label_wrap_gen((width = 25))) +
+  scale_y_continuous(labels = scales::percent)
 ```
 
 
@@ -308,6 +373,19 @@ mtcars %>%
         strip.text.y.left = element_text(angle = 0))
 ```
 
+
+```{r}
+load("/Users/escheh/Documents/GitHub/planting.shade/data/mn_bgs.rda")
+
+df <- mn_bgs %>% sf::st_drop_geometry() %>%
+  right_join(heat, by = c("GEOID" = "bg20"))
+
+df %>%
+  ggplot(aes(x = heat2016, y = canopy_percent)) +
+  geom_point() +
+  geom_smooth(fill = NA, color = colors$councilBlue)
+  
+```
 
 # Narrative 
 

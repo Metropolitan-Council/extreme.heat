@@ -32,7 +32,7 @@ if (process_demos == TRUE) {
       variables = .vars,
       survey = "acs5",
       state = "MN",
-      county = c("003", "019", "037", "053", "123", "139", "163"),
+      county = c("Anoka", "Carver", "Dakota", "Hennepin", "Ramsey", "Scott", "Washington"),#c("003", "019", "037", "053", "123", "139", "163"),
       year = 2020) %>%
       group_by(GEOID) %>%
       summarise(sumest = sum(estimate),
@@ -98,7 +98,7 @@ if (process_demos == TRUE) {
     ),
     survey = "acs5",
     state = "MN",
-    county = c("003", "019", "037", "053", "123", "139", "163"),
+    county = c("Anoka", "Carver", "Dakota", "Hennepin", "Ramsey", "Scott", "Washington"),#c("003", "019", "037", "053", "123", "139", "163"),
     year = 2020
   ) %>%
     bind_rows(acsapi_sums) %>%
@@ -110,9 +110,10 @@ if (process_demos == TRUE) {
       values_from = c("estimate", "moe"),
       names_sep = "."
     ) %>%
-    mutate(
+      mutate(
       
-      estimate.tenure_utilitycost = estimate.tenure_grossrent - estimate.tenure_contractrent,
+      estimate.tenure_utilitycost = (estimate.tenure_grossrent - estimate.tenure_contractrent) / estimate.tenure_contractrent,
+      moe.tenure_utilitycost = moe.tenure_grossrent,
       
       estimate.hh_1person_percent = estimate.hh_1person / estimate.hh_total,
       moe.hh_1person_percent = moe_ratio(num = estimate.hh_1person, denom = estimate.hh_total, 
@@ -161,7 +162,7 @@ if (process_demos == TRUE) {
     pivot_wider(names_from = type, values_from = values) %>%
     # mutate(flag = if_else(estimate - moe <= 0, 1, NA_real_)) %>% #remove instances where moe overlaps with zero; ACTUALLY, what to do when the percent IS zero?!?! (percent english, or something)
     # filter(is.na(flag),) %>% select(-flag) %>%
-    filter(str_detect(variable, "percent|income")) %>%
+    filter(str_detect(variable, "percent|income|tenure_utilitycost")) %>%
     filter(variable %not_in% c("income_povstatus", "income_below185pov",
                                "tenure_grossrent", "tenure_contractrent"))
     # filter(!str_detect(variable, "_total"), #remove variables used only to calculate percentages
@@ -254,7 +255,7 @@ if (process_demos == TRUE) {
     "hh_1person_percent", "Households; % 1-person households",
     "hhage_1personover65_percent", "Households; % 1-person households age 65+",
     "tenure_renter_percent", "Tenure; renter %",
-    "tenure_utilitycost", "Tenure; median renter utility costs",
+    "tenure_utilitycost", "Tenure; median renter utility costs as a percent of contract rent",
     "income_percapita", "Income; per capita",
     "income_below185pov_percent", "Income; % under 185% poverty rate",
     "comm_cellonly_percent", "Communications; % accessing internet via cellphone only",
