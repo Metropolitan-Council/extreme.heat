@@ -9,6 +9,8 @@ if (process_demos == TRUE) {
   # A portion of these data come from the tidycensus package, rather than the geospatial commons. I want more/different variables, and this seems like the easiest way to do this currently.
   
   library(tidycensus)
+  library(tidyverse)
+  `%not_in%` <- Negate(`%in%`)
   
   # You will need an API key from Census:
   # - [Request an api key](https://api.census.gov/data/key_signup.html)
@@ -25,6 +27,7 @@ if (process_demos == TRUE) {
   #                geography == "block group",
   #                str_detect(concept, "HOUSE"))
   #  you may need to access the table shells: https://www.census.gov/programs-surveys/acs/technical-documentation/table-shells.html
+  #  census reporter topics are also very useful! https://censusreporter.org/topics/
 
   fxn_sum_acs <- function(.vars, .name){
     get_acs(
@@ -32,7 +35,7 @@ if (process_demos == TRUE) {
       variables = .vars,
       survey = "acs5",
       state = "MN",
-      county = c("Anoka", "Carver", "Dakota", "Hennepin", "Ramsey", "Scott", "Washington"),#c("003", "019", "037", "053", "123", "139", "163"),
+      county = c("Anoka", "Carver", "Dakota", "Hennepin", "Ramsey", "Scott", "Washington"),
       year = 2020) %>%
       group_by(GEOID) %>%
       summarise(sumest = sum(estimate),
@@ -41,16 +44,18 @@ if (process_demos == TRUE) {
       rename(estimate = sumest,
              moe = summoe)
   }
-  
-  # I'd like to make this work, but am having a hard time :/ 
+  # # I'd like to make this work, but am having a hard time :/ 
   # fxn_calc_percent <- function(x, .num, .denom){
+  #   # .num_2 <- paste0("estimate.", as_label(enquo(.num)))
   #   x %>%
-  #     mutate("estimate.{{.num}}_percent" :=# x$[[(paste0("estimate.", .num))]])
+  #     mutate("{{.num}}_percent" := !!enquo(.num) / !!enquo(.denom))
   #   # paste0("estimate.", (.num), "_percent") = paste0("estimate.", (.num)) / paste0("estimate.", (.denom))
   #   # paste0("moe.", !!enquo(.num), "_percent") = moe_ratio(num = paste0("estimate.", !!enquo(.num)), denom = paste0("estimate.", !!.enquo(.denom)),
   #   #                                    moe_num = paste0("moe.", !!enquo(.num)), moe_denom = paste0("moe.", !!.enquo(.denom)))
   # }
-
+  # 
+  # acsapi %>% head() %>% select(bg20, estimate.age_sensitive, estimate.pop_total) %>%
+  #   fxn_calc_percent(.num = age_sensitive, .denom = estimate.pop_total)
 
   
    acs_age <- fxn_sum_acs(.vars = c(paste0("B01001_00", c(3:6)), #under18 m
