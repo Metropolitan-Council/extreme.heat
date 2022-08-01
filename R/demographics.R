@@ -99,7 +99,8 @@ if (process_demos == TRUE) {
       
       comm_total = "B28002_001",
       comm_nointernet = "B28002_013",
-      comm_cellonly = "B28002_006"
+      comm_cellonly = "B28002_006",
+      comm_yesinternet = "B28002_002"
     ),
     survey = "acs5",
     state = "MN",
@@ -134,7 +135,11 @@ if (process_demos == TRUE) {
       moe.lang_eng_percent = moe_ratio(num = (estimate.lang_eng), denom = estimate.lang_total,
                                                moe_num = moe.lang_eng, moe_denom = moe.lang_total),
       
-      estimate.tenure_renter_percent = estimate.tenure_renter / estimate.tenure_total,
+      estimate.tenure_owner_percent = (estimate.tenure_total - estimate.tenure_renter) / estimate.tenure_total,
+      moe.tenure_owner_percent = moe_ratio(num = estimate.tenure_renter, denom = estimate.tenure_total,
+                                            moe_num = moe.tenure_renter, moe_denom = moe.tenure_total),
+
+            estimate.tenure_renter_percent = estimate.tenure_renter / estimate.tenure_total,
       moe.tenure_renter_percent = moe_ratio(num = estimate.tenure_renter, denom = estimate.tenure_total,
                                             moe_num = moe.tenure_renter, moe_denom = moe.tenure_total),
       
@@ -154,7 +159,11 @@ if (process_demos == TRUE) {
       moe.comm_nointernet_percent = moe_ratio(num = estimate.comm_nointernet, denom = estimate.comm_total,
                                             moe_num = moe.comm_nointernet, moe_denom = moe.comm_total),
       
-      estimate.comm_cellonly_percent = estimate.comm_cellonly / estimate.comm_total,
+      estimate.comm_yesinternet_percent = estimate.comm_yesinternet / estimate.comm_total,
+      moe.comm_yesinternet_percent = moe_ratio(num = estimate.comm_yesinternet, denom = estimate.comm_total,
+                                            moe_num = moe.comm_yesinternet, moe_denom = moe.comm_total),
+
+            estimate.comm_cellonly_percent = estimate.comm_cellonly / estimate.comm_total,
       moe.comm_cellonly_percent = moe_ratio(num = estimate.comm_cellonly, denom = estimate.comm_total,
                                             moe_num = moe.comm_cellonly, moe_denom = moe.comm_total),
       
@@ -177,8 +186,6 @@ if (process_demos == TRUE) {
     #                            "income_pov_status", "income_below185pov",
     #                            "hhage_1personover65", "hh_1person"))  
 
-  acsapi_percents
-  acsapi_persons
   # view(acsapi)
     # filter(variable %not_in% c("hh_total", "hh_1person", "hh_1personover65"))
 
@@ -278,11 +285,13 @@ if (process_demos == TRUE) {
     "hh_1person_percent", "Households; % 1-person households",
     "hhage_1personover65_percent", "Households; % 1-person households age 65+",
     "tenure_renter_percent", "Tenure; renter %",
+    "tenure_owner_percent", "Tenure; owner %",
     "tenure_utilitycost", "Tenure; median renter utility costs as a percent of contract rent",
     "income_percapita", "Income; per capita",
     "income_below185pov_percent", "Income; % under 185% poverty rate",
     "comm_cellonly_percent", "Communications; % accessing internet via cellphone only",
     "comm_nointernet_percent", "Communications; % without internet at home",
+    "comm_yesinternet_percent", "Communications; % with internet",
     "lang_eng_percent", "Communications; % speaking English at home",
     "income_median", "Income; median household",
     "pamindnh", "Race; % American Indian",
@@ -293,10 +302,10 @@ if (process_demos == TRUE) {
     "pothmultnh", "Race; % Other or Multiracial"
   )
   
-  demographics <- (acsapi_percents %>% add_column(type = "percents")) %>%
-    bind_rows(acsapi_persons %>% add_column(type = "persons"))%>% #bind_rows(acsapi, acs_geospatial) %>%
-    bind_rows(census_race %>% add_column(type = "percents")) %>%
-    bind_rows(census_persons %>% add_column(type = "persons")) %>%
+  demographics <- (acsapi_percents %>% add_column(data = "percents")) %>%
+    bind_rows(acsapi_persons %>% add_column(data = "persons"))%>% #bind_rows(acsapi, acs_geospatial) %>%
+    bind_rows(census_race %>% add_column(data = "percents")) %>%
+    bind_rows(census_persons %>% add_column(data = "persons")) %>%
     filter(!is.na(estimate)) %>% #not sure why there are nas
     full_join(var_names)
 

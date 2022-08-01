@@ -15,7 +15,7 @@ library(tidyverse)
 library(lubridate)
 library(councilR)
 library(tidycensus)
-
+library(patchwork)
 knitr::opts_chunk$set(
   echo = F, message = F, warning = F, results = "hide",
   fig.pos = "H"
@@ -45,7 +45,7 @@ The goal of this project is to do a major addition to the existing body of work.
 
 # Methods
 
-## Land surface temperature and remote sensing
+## Remote sensing temperature
 
 Temperature sensing has been a component of the Landsat satellite missions since 1982 by measuring infrared (long) wavelengths which are emitted from the Earth's surface and are a function of surface temperature. Landsat missions 4 and 5 used a thematic mapper instrument to measure infrared reflectance at 120 meter resolution (which underwent a re-sampling process to 30 meter resolution). Landsat 7 used an enhanced thematic mapper plus instrument which increased the spatial resolution to 30 meters. Landsat 7 had an equipment malfunction (scan line corrector) in 2003 which means that not all land area was measured by the satellite. Landsat missions 8 and 9 have thermal infrared sensors (TIRS and TIRS-2, respectively) which detect long wavelengths of light emitted using Quantum Well Infrared Photodetectors (QWIPs). This is a lower-cost and newer alternative to conventional infrared technology used in previous Landsat missions ([NASA](https://landsat.gsfc.nasa.gov/article/thermal-infrared-sensor-tirs/), [USGS](https://www.usgs.gov/faqs/what-are-band-designations-landsat-satellites)). 
 
@@ -203,10 +203,10 @@ read_csv("./data/GEE_MSP_HeatHistory.csv",
               filter(datatype == "TMAX") %>%
               select(date, value) %>%
               rename("air_temp" = value)) %>%
-  pivot_longer(names_to = "source", values_to = "temp", -c(date, air_temp)) %>%
+  pivot_longer(names_to = "source2", values_to = "temp", -c(date, air_temp)) %>%
   filter(!is.na(temp)) %>%
   mutate(doy = yday(date)) %>%
-  mutate(flag = if_else(source == "LST_L7" & date > ymd("2003-06-01"), 9, 1)) %>% #remove when scan line errors started
+  mutate(flag = if_else(source2 == "LST_L7" & date > ymd("2003-06-01"), 9, 1)) %>% #remove when scan line errors started
   filter(flag == 1)
 
 # gee %>%
@@ -227,7 +227,7 @@ gee %>%
   mutate(type = case_when(air_temp < 85 ~ "mild",
                           # air_temp < 90 ~ "moderate",
                           TRUE ~ "hot")) %>% #filter(source == "LST_L7")
-  ggplot(aes(x = air_temp, y = temp, col = source)) +
+  ggplot(aes(x = air_temp, y = temp, col = source2)) +
   geom_point()+#aes(col = source)) +
   theme_council_open() +
   geom_smooth(method = "lm", fill = NA)+#, col = "black") +
@@ -236,7 +236,7 @@ gee %>%
         col = "Landsat",
         caption = "Summer MSP airport land temperatures correlate with air temperatures.\nLandsat 7 data is only shown before the scan line error failure (pre 2003).") +
   scale_color_brewer(palette =  "Paired") +
-  facet_wrap(~source)+
+  facet_wrap(~source2)+
   guides(col = "none")
   # facet_wrap(~type, scales = "free")
 
@@ -420,7 +420,7 @@ msp_temps %>% filter(datatype %in% c("TMAX", "TMIN")) %>%
 #may - sept
 ```
 
-## Extreme heat map
+### Extreme heat map
 
 Maybe not updating the 2016 map with 2021/2022 data, but instead adding more information? Decision can get made at the end of summer - we just need to see what heat events line-up with Landsat measurements this year. 
 
@@ -480,7 +480,7 @@ source("./R/heat.R")
 #   ))
 
 # # this works for running a function on each variable type
-df <- demographics %>% full_join(heat) %>%
+df <- filter(demographics, data == "percents") %>% full_join(heat) %>%
   separate(name, sep = "; ", into = c("type", "other"), remove = F) %>%
   mutate(source = case_when(type ==  "Race" ~ "Sources: 2020 decennial census;\nJuly 22, 2016 Landsat 8 thermal infared sensor",
                             TRUE ~ "Sources: 2016-2020 American Community Survey;\nJuly 22, 2016 Landsat 8 thermal infared sensor"),
@@ -511,26 +511,77 @@ heat_demo_plot <- function(x) {
       expand = c(.01, .01)
     ) +
     labs(x = "Average land temperature during 2016 heat wave",
-         y = "",
+         y = "", title = "Block group percents",
          caption = str_wrap(paste0(first(x$source)), width = 60))
 }
 
+
+
+
+### persons
+df1 <- filter(demographics, data == "percents") %>% full_join(heat) %>%
+  separate(name, sep = "; ", into = c("type", "other"), remove = F) %>%
+  mutate(name = str_replace(name, "% ", "total "),
+         source = case_when(type ==  "Race" ~ "Sources: 2020 decennial census;\nJuly 22, 2016 Landsat 8 thermal infared sensor",
+                            TRUE ~ "Sources: 2016-2020 American Community Survey;\nJuly 22, 2016 Landsat 8 thermal infared sensor"),
+         labels = case_when(variable %in% c("income_median", "income_percapita") ~ "dollar",
+                            TRUE ~ "percent"),
+         height = case_when(type == "Race" ~ 6,
+                            TRUE ~ 3)) %>%
+  filter(!is.na(name), variable != "income_below185pov_percent") %>%
+  mutate(tempbin = case_when(heat2016 < 85 ~ "<85",
+                             heat2016 < 90 ~ "85-89",
+                             heat2016 < 95 ~ "90-94",
+                             heat2016 < 100 ~ "95-99",
+                             # heat2016 < 105 ~ "<105",
+                             TRUE ~ "100+")) %>%
+    mutate(tempbin = factor(tempbin, levels=c("<85", "85-89", "90-94", "95-99", "100+")))
+
+heat_persons_plot <- function(x) {
+ x %>% 
+   group_by(variable, tempbin, name) %>%
+   summarise(persons = sum(estimate)) %>%
+   # complete()
+    ggplot(aes(y = persons, x = name, fill = tempbin)) +
+    geom_bar(stat = "identity", position = "fill") +
+    facet_wrap( ~ name,
+                scales = "free",
+                labeller = label_wrap_gen((width = 25))) +
+    theme_council_open() +
+  scale_fill_brewer(palette = "RdBu", direction = -1) +
+    # scale_x_continuous(
+    #   labels = function(x)
+    #     paste0(x, "°F"),
+    #   breaks = seq(80, 100, by = 5),
+    #   limits = c(80, 105),
+    #   expand = c(.01, .01)
+    # ) #+
+   theme(axis.text.x = element_blank(),
+         legend.position = "bottom")+
+   scale_y_continuous(labels = scales::percent) +
+    labs(y = "", x = "", fill = "Temperature", title = "Regional totals",
+         caption = str_wrap(paste0(first(x$source)), width = 60))
+}
 ```
 
 ### Age
 
-Neither younger (under age 18) or older (65 or above) age groups who have increased sensitivity to extreme heat appear to be at an increased risk of exposure (Figure \@ref(fig:age-fig)).
+Neither younger (under age 18) or older (65 or above) age groups who have increased sensitivity to extreme heat appear to be at an increased risk of exposure (Figure \@ref(fig:age-fig)). About 25% of the region's total population of a sensitive age lives in a block group with temperatures over 95 degrees.
 
-```{r age-fig}
+```{r, age-fig}
 #| fig.cap = "Relationship between resident age and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region. The blue line shows the trend line from a generalized additive model.",
 #| results='markup', 
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
 #| fig.align='right',
-#| fig.asp = .6
-filter(df, type == "Age") %>% 
+#| fig.asp = 1
+(filter(df, type == "Age") %>% 
   heat_demo_plot() +
-  scale_y_continuous(labels = scales::percent)
+  scale_y_continuous(labels = scales::percent)) /
+
+filter(df1, type == "Age") %>% 
+  heat_persons_plot()
+
 ```
 
 
@@ -540,31 +591,42 @@ Hotter areas have greater percentages of residents who do not speak English at h
 
 
 
-```{r lang-fig}
+```{r, lang-fig}
 #| fig.cap = "Relationship between languages spoken by residents and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region. The blue line shows the trend line from a generalized additive model.",
 #| results='markup', 
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
 #| fig.align='right',
-#| fig.asp = .6
-filter(df, type == "Communications") %>% 
+#| fig.asp = 1.2
+(filter(df, type == "Communications",
+        name != "Communications; % accessing internet via cellphone only") %>% 
   heat_demo_plot() +
+  scale_y_continuous(labels = scales::percent)) /
+
+filter(df1, type == "Communications",
+       # name != "Communications; total without internet at home",
+       name != "Communications; total accessing internet via cellphone only") %>% 
+  heat_persons_plot() +
   scale_y_continuous(labels = scales::percent)
 ```
 
 ### Household size
 
-People are more likely to be living alone (household size of 1) in areas with greater exposure to extreme heat (Figure \@ref(fig:hh-fig)). Social cohesion/connections can impact human vulnerability to extreme heat. From a safety perspective, people are always advised to check in on family and friends living alone during heat waves. Living alone may put people at an elevated risk. Fortunately, it does not seem that elders living alone have greater risk.
+People are more likely to be living alone (household size of 1) in areas with greater exposure to extreme heat (Figure \@ref(fig:hh-fig)). Over 25% of our region's 1-person households live in areas which can experience heat of 95 degrees or more. Social cohesion/connections can impact human vulnerability to extreme heat. From a safety perspective, people are always advised to check in on family and friends living alone during heat waves. Living alone may put people at an elevated risk. Fortunately, it does not seem that elders living alone have greater risk.
 
-```{r hh-fig}
+```{r, hh-fig}
 #| fig.cap = "Relationship between household size and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region. The blue line shows the trend line from a generalized additive model.",
 #| results='markup', 
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
 #| fig.align='right',
-#| fig.asp = .6
+#| fig.asp = .7
 filter(df, type == "Households") %>% 
   heat_demo_plot() +
+  scale_y_continuous(labels = scales::percent)
+
+filter(df1, type == "Households") %>% 
+  heat_persons_plot() +
   scale_y_continuous(labels = scales::percent)
 ```
 
@@ -572,32 +634,37 @@ filter(df, type == "Households") %>%
 
 There are disparities in exposure to extreme heat with income. Lower income areas (median household income) tend to be exposed to hotter temperatures. Areas where a larger share of residents make less than 185% of the poverty rate are also exposed to hotter temperatures (Figure \@ref(fig:income-fig)).
 
-```{r income-fig}
+```{r, income-fig}
 #| fig.cap = "Relationship between income and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region. The blue line shows the trend line from a generalized additive model.",
 #| results='markup', 
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
 #| fig.align='right',
-#| fig.asp = .6
+#| fig.asp = .7
 filter(df, type == "Income") %>% 
   heat_demo_plot() +
   scale_y_continuous(labels = scales::dollar)
+
 ```
 
 
 ### Race
 
-Areas where a greater percent of residents identify as a person of color tend to be hotter. Black and Hispanic residents seem to be disproportionately impacted (Figure \@ref(fig:race-fig)).
+Areas where a greater percent of residents identify as a person of color tend to be hotter. Native American (American Indian) residents seem to be disproportionately impacted with nearly 75% of the regions population who identifies as Native American living in block groups with temperatures capable of exceeding 100 degrees (Figure \@ref(fig:race-fig)).
 
 
-```{r race-fig}
+```{r, race-fig}
 #| fig.cap = "Relationship between resident's racial identity and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region. The blue line shows the trend line from a generalized additive model.",
 #| results='markup', 
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
 #| fig.align='right'
-filter(df, type == "Race") %>% 
+(filter(df, type == "Race") %>% 
   heat_demo_plot() +
+  scale_y_continuous(labels = scales::percent))/
+
+filter(df1, type == "Race") %>% 
+  heat_persons_plot() +
   scale_y_continuous(labels = scales::percent)
 ```
 
@@ -605,20 +672,28 @@ filter(df, type == "Race") %>%
 
 Areas were more residents are renters are disproportionately hotter. This may indicate the need for particular types of mitigation strategies if renters have less agency to make structural (i.e., installing air conditioning units) or environmental (i.e., planting trees or landscaping interventions) changes to reduce heat exposure (Figure \@ref(fig:tenure-fig)).
 
-Interestingly, the median utility cost for renters is lower in areas which are hotter. There may be some confounding factors going on however. For instance, utility costs may be low if some options for heating or cooling are not available (utility cost cannot be parsed by heating or cooling costs), and utility cost may be a function of preferences rather than energy efficiency. 
+<!-- Interestingly, the median utility cost for renters is lower in areas which are hotter. There may be some confounding factors going on however. For instance, utility costs may be low if some options for heating or cooling are not available (utility cost cannot be parsed by heating or cooling costs), and utility cost may be a function of preferences rather than energy efficiency.  -->
 
 
-```{r tenure-fig}
+```{r, tenure-fig}
 #| fig.cap = "Relationship between resident housing tenure and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region. The blue line shows the trend line from a generalized additive model.",
 #| results='markup', 
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
 #| fig.align='right',
-#| fig.asp = .6
+#| fig.asp = .7
 # knitr::include_graphics("./figs/Tenure.png")
-filter(df, type == "Tenure", 
+(filter(df, type == "Tenure", 
        !str_detect(name, "utility")) %>% 
   heat_demo_plot() +
+    facet_wrap( ~ name,
+                # scales = "free_y",
+                labeller = label_wrap_gen((width = 25))) +
+  scale_y_continuous(labels = scales::percent)) /
+
+filter(df1, type == "Tenure", 
+       !str_detect(name, "utility")) %>% 
+  heat_persons_plot() +
     facet_wrap( ~ name,
                 # scales = "free_y",
                 labeller = label_wrap_gen((width = 25))) +
@@ -627,7 +702,7 @@ filter(df, type == "Tenure",
 
 
 
-# *MITIGATION* and *ADAPTATION* strategies for extreme heat 
+## *MITIGATION* and *ADAPTATION* strategies for extreme heat 
 
 If rising temperatures are inevitable, how are residents/cities going to adapt/mitigate impact? Aka Link variables about the built and natural environments
 
@@ -635,10 +710,6 @@ If rising temperatures are inevitable, how are residents/cities going to adapt/m
 - housing metrics from ztrax zillow data; is there an "adaptation gap" to extreme heat? (idea = systemic structural/economic/racial issues may also manifest as no cooling available to residents to mitigate extreme heat). with ztrax consider if we can get cooling data directly from county assessors or parcel data (and keep in mind that county-to-county might be challenging to compare.) maybe consider age of housing stock too (thinking about energy efficiency, etc.)
 
 **ADD OVERLAY MAPS** to the storymap! (kind of like how land use is there now, but try to be more explicit? think about how the data could be compelling to inform landscape architecture, etc.)
-
-## Methods
-
-## Results
 
 ### Air conditioning in residences
 
@@ -652,7 +723,7 @@ There are still issues with Zillow ZTRAX data (for instance, the whole city of M
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
 #| fig.align='right',
-#| fig.asp = .6
+#| fig.asp = .7
 load("./data/noAC.rda")
 
 noAC %>%
@@ -707,7 +778,7 @@ Tree canopy is a little stranger. It falls apart only in deeply agricultural are
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
 #| fig.align='right',
-#| fig.asp = .6
+#| fig.asp = .7
 process_environment <- FALSE
 source("./R/environment.R")
 
