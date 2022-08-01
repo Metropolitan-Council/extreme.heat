@@ -27,26 +27,13 @@ knitr::opts_chunk$set(
 
 ```
 
-get a refernce point; acres < ref temp, acres @ ref temp, acres > ref temp
-ggplot(aes(x = tempbin, y = acres, col = year)) +
-geom_bar()
-
-say we have FIVE reference points; calc mean and SD of ref point. 
-areas within 1 sd of reference temp; +-1sd (at reference), -2sd (cooler), +2sd (hotter)
-
-
-```{r}
-# On May 31, 2003, the Scan Line Corrector (SLC), which compensates for the forward motion of the satellite, failed.
-metro_stations_daily
-
-```
-
-
 # Action items
 
-1) COW meeting: big question is "with the Council's convening ability, could we pull together some shared definitions, consider developing a stakeholder group to guide this work? 
-2) LUAC meeting: big question is "what tools/data would help you commit to and act on mitigating extreme heat? Thinking about resource allocations, planning decisions, etc.
-3) Council Climate Workgroup: they are focusing on Climate Action Plan right now, may not be best fit
+1) Do we want to get on a meeting schedule? Joel says yes, just pick a date.
+  - COW meeting: big question is "with the Council's convening ability, could we pull together some shared definitions, consider developing a stakeholder group to guide this work? 
+  - LUAC meeting: big question is "what tools/data would help you commit to and act on mitigating extreme heat? Thinking about resource allocations, planning decisions, etc.
+  - Council Climate Workgroup: they are focusing on Climate Action Plan right now, may not be best fit
+2) Move away from thinking about the hottest land temperature going up, and instead think about areas where heat risk has changed over time.
 
 # Introduction
 
@@ -56,100 +43,22 @@ Something about connections between heat and urban planning.
 
 The goal of this project is to do a major addition to the existing body of work. We hope to better integrate the consequences of climate change into city planning and policy decisions, give stakeholders tools to act on mitigating the risk of extreme heat, and ultimately help inform a more sustainable and healthier future for the Twin Cities region.  
 
+# Methods
 
-# Changing *RISK* of extreme heat
+## Land surface temperature and remote sensing
 
-## Historic temperature trends
+Temperature sensing has been a component of the Landsat satellite missions since 1982 by measuring infrared (long) wavelengths which are emitted from the Earth's surface and are a function of surface temperature. Landsat missions 4 and 5 used a thematic mapper instrument to measure infrared reflectance at 120 meter resolution (which underwent a re-sampling process to 30 meter resolution). Landsat 7 used an enhanced thematic mapper plus instrument which increased the spatial resolution to 30 meters. Landsat 7 had an equipment malfunction (scan line corrector) in 2003 which means that not all land area was measured by the satellite. Landsat missions 8 and 9 have thermal infrared sensors (TIRS and TIRS-2, respectively) which detect long wavelengths of light emitted using Quantum Well Infrared Photodetectors (QWIPs). This is a lower-cost and newer alternative to conventional infrared technology used in previous Landsat missions ([NASA](https://landsat.gsfc.nasa.gov/article/thermal-infrared-sensor-tirs/), [USGS](https://www.usgs.gov/faqs/what-are-band-designations-landsat-satellites)). 
 
-Minnesota's temperatures have been warming over the past century, with warming trends accelerating since 2000 (Figure \@ref(fig:mn-warmingstripes-avg)). Warmer winters and rising daily low temperatures strongly contribute to this trend. 
+While broad patterns in land temperature can be studied back to 1982 using all Landsat satellite data, more detailed patterns in temperature are best explored from with Landsats 8 and 9 (2013 - present), primarily because of improvements in spatial resolution. Both satellites image the Twin Cities region every 16 days. Since the launch of Landsat 9 in the fall of 2021, this means that high quality temperature data is available for our region every 8 days. 
 
-```{r, mn-warmingstripes-avg}
-#| fig.cap = "Average temperatures in Minnesota from 1895-2021. Source NOAA and https://showyourstripes.info.",
-#| results='markup', 
-#| out.width= "5in",  
-#| out.extra='style="float:right"', 
-#| fig.align='right'
+The entire Twin Cities region is covered by Landsat path 27, row 28-29. The east metro is also on path 26, and the west metro is also on path 28. Because the entire region is not measured every day, this means that extreme heat events don't always line up with when we get satellite data. Additionally, cloudy days (water vapor between the satellite and the ground make the pixels seem much cooler, so we can't rely on data with clouds) or days with heavy smoke cover do not produce useable temperature data.
 
-knitr::include_graphics("./NORTH_AMERICA-USA-Minnesota-1895-2021-NO-barslabel.png")
-```
+## Land surface temperature versus air temperature
 
-Hotter summer temperatures are also a component of a warming world, and heat waves have direct consequences on human health. In Minnesota, warming summer trends (probably) include (Figure \@ref(fig:msp-temps):
-
-- neither annual maximum temperatures nor average summer highs have changed much, but
-- heat waves (multiple days of extreme heat) are more common
-- daily minimum temperatures are warmer
+Not the same thing, but well correlated. 
 
 
-
-```{r, msp-temps, fig.asp = 1, out.width= "6in", fig.cap = "Summer air temperatures (May 1 - Oct 1) at MSP airport since records began at that station. The shaded box shows the years which overlap with Landsat satellite data availability. The horizontal red dashed line shows 100 degrees F, and the vertical grey dashed line indicates year 2016 which is currently used to quanify the risk of extreme heat across the Twin Cities region."}
-load("./data/msp_temps.rda")
-
-landsat_yrs <- tibble(datatype = c("TMAX", "TMIN"),
-                      lsy = c(88, 70), 
-                      lsyend = c(106, 90))
-
-msp_temps %>% filter(datatype %in% c("TMAX", "TMIN")) %>%
-  mutate(plot = if_else(datatype == "TMAX", max, mean)) %>%
-  bind_rows(msp_temps %>% filter(datatype == "TMAX") %>%
-              mutate(plot = mean,
-                     datatype = "TMAXmean")) %>%
-  filter(year != 2022) %>%
-  ggplot(aes(x = year, y = plot)) + #, col = doy
-  geom_hline(data = data.frame(datatype = "TMAX"), aes(yintercept = 100), lty = 2, col = "red") +
-  geom_vline(xintercept = 2016, lty = 2, col = "grey50") +
-  # geom_rect(data = data.frame(datatype = "TMAX"), aes(xmin = 1983, xmax = 2022, ymin = -Inf, ymax = Inf), alpha = 0.1, fill="grey", inherit.aes = FALSE) +
-  # geom_rect(data = data.frame(datatype = "TMIN"), aes(xmin = 1983, xmax = 2022, ymin = -Inf, ymax = Inf), alpha = 0.1, fill="grey", inherit.aes = FALSE) +
-  annotate("rect", xmin = 1983, xmax = 2022, ymin = -Inf, ymax = Inf, alpha = .1) +
-  geom_line(col = "grey 50") +
-  geom_point() +
-  councilR::theme_council_open() +
-  labs(y = "", #str_wrap("Air temperature", 10),
-       x = "", 
-       title = "MSP airport air temperature") +
-  scale_x_continuous(expand = c(.01,0)) +
-  scale_colour_gradient(
-    low = "#132B43",
-    high = "#56B1F7",
-    space = "Lab",
-    # guide = "legend",
-    aesthetics = "colour",
-    breaks=c(lubridate::yday(ymd("2022-06-01")), 
-             lubridate::yday(ymd("2022-07-01")),
-             lubridate::yday(ymd("2022-08-01")),
-             lubridate::yday(ymd("2022-09-01"))),
-    labels=c("June 1",
-             "July 1",
-             "Aug 1",
-             "Sept 1"),
-    name = "Date"
-  ) +
-  annotate("text", label = "2016", x = 2016, y = -Inf, vjust = -1) +
-  annotate("text", label = "Landsat era", x = 2005, y = Inf, vjust = 1) +
-  facet_wrap(~datatype, ncol = 1, scales = "free_y",
-             labeller = as_labeller(c(TMAX = "Hottest summer temperature recorded", 
-                                      TMIN = "Average summer lows",
-                                      TMAXmean = "Average summer highs"))) +
-  scale_y_continuous(labels = function(x) paste0(x, "°F"))
-
-#may - sept
-```
-
-
-## Extreme heat map
-
-
-### Methods
-
-Landsat satellite introduction. Various missions, sensor details, etc. 
-
-Issues with Landsat include clouds (water vapor between the satellite and the ground make the pixels seem much cooler, so we can't rely on data with clouds), smoke cover, etc. 
-
-Details on how often we get pictures of our area. Landsats 8/9 circle earth every 16 days. This means that extreme heat events don't always line up with when we get satellite data. Prior to the launch of Landsat 8, there was a decade of years where landsat 7 operated with a scan line error (June 2003 - Feb 2013). 
-  - Landsat specifics
-    - The entirety of our region is covered by path 27, row 28-29. 
-    - The east metro is also on path 26, and the west metro is also on path 28. 
-
-```{r}
+```{r, include = F, eval = F}
 landsat8dates <- seq(from = ymd("2013-05-11"), to = ymd("2022-11-01"), by = "16 days")
 landsat9dates <- seq(from = ymd("2021-11-01"), to = ymd("2022-11-01"), by = "16 days")
 
@@ -186,14 +95,88 @@ df %>%
   # # geom_errorbar(aes())
 
 metro_stations %>% select(latitude, longitude, name) %>% write_csv(file = "./data/export_stations_gee.csv")
+
+avg_heat <- read_csv(
+  paste0("./data/metc_extremeheat/", list.files("./data/metc_extremeheat/", pattern = "heatac")),
+  col_select = c(year, CTU_NAME, avg_lst, regionAvg, regionSD),
+  id = "year"
+  ) %>%
+  mutate(year = as.numeric(str_remove_all(year, ("./data/metc_extremeheat/heatacres_|.csv"))),
+         avg_lst = as.numeric(str_remove_all(avg_lst, "\\{LST=|\\}"))) %>%
+    mutate(diff = avg_lst - regionAvg)
+
+# confirm that 2016 is the hottest year
+avg_heat %>%
+  group_by(CTU_NAME) %>%
+  mutate(hottest_temp = max(avg_lst)) %>%
+  filter(avg_lst == hottest_temp) %>%
+  ungroup() %>% count(year)
+  
+avg_heat %>%
+  filter(year != 2013) %>% #patchy clouds
+  ggplot(aes(y = diff, x = as.character(year),group = CTU_NAME)) +
+  geom_point(position = position_dodge(width = .4))+
+  geom_line(alpha = .4, position = position_dodge(width = .4)) +
+  theme_council_open() + 
+  geom_hline(yintercept = 0)
+
+  ggplot() +
+geom_point(aes(y = avg_lst, x = (year), group = CTU_NAME),
+  data = filter(avg_heat, year != 2013),
+position = position_dodge(width = .4))+
+  geom_line(aes(y = avg_lst, x = (year), group = CTU_NAME),
+  data = filter(avg_heat, year != 2013),
+  alpha = .4, position = position_dodge(width = .4)) +
+    geom_point(col = "red", size = 4, 
+               aes(x = year, y = regionAvg), 
+               data = (avg_heat %>% distinct(year, regionAvg) %>%
+                         filter(year != 2013))) +
+    theme_council_open() 
+  
+  avg_heat %>%filter(year == 2021) %>%
+    arrange(-avg_lst)
+  
+  
+  
+  
+acres_heat <- read_csv(
+  paste0("./data/metc_extremeheat/", list.files("./data/metc_extremeheat/", pattern = "heatmeans")),
+  col_select = c(year, CTU_NAME, sq_miles),
+  id = "year"
+  ) %>%
+  mutate(year = as.numeric(str_remove_all(year, ("./data/metc_extremeheat/heatmeans_|.csv"))),
+         sq_miles = str_remove_all(sq_miles, "\\{groups=\\[|\\}|\\{|tempbin\\=[123456],|\\]|, | ")) %>%
+  separate(sq_miles, sep = c("sum="), 
+           into = c("na", "coolest", "cool", "average", "hot", "hottest")) %>% #into = as.character(seq(0, 5))) %>%
+  select(-na) %>%# select(-`0`) 
+  pivot_longer(names_to = "tempbin", values_to = "acres", -c(year, CTU_NAME)) %>%
+  mutate(acres = as.numeric(acres)) %>%
+  mutate(tempbin = factor(tempbin, levels=c("coolest", "cool", "average", "hot", "hottest")))
+
+acres_heat %>%
+  group_by(year, tempbin) %>%
+  summarise(acres = sum(acres, na.rm = T)) %>%
+  ggplot(aes(x = as.character(year), y = acres, fill = tempbin)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_brewer(palette = "RdBu", direction = -1) +
+  # facet_wrap(~CTU_NAME, scales = "free") +
+  theme_council_open() + 
+  labs(title = "7-county region", y = "Square\nmiles\n(land)",
+       x = "Year", fill = "temperature",
+       caption = "Temperature bins are in relation to 14 reference sites, NOAA temperatures.\nAverage = within 0.5 standard deviations of reference site temperature.\nCool/hot are within 1 sd, and coolest/hottest are > 1 sd away from reference site temperature.")
+
+
+acres_heat %>%
+  filter(str_detect(CTU_NAME, "Minneapolis|Elmo|Maplewood|Woodbury")) %>%
+  ggplot(aes(x = as.character(year), y = acres, fill = tempbin)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_brewer(palette = "RdBu", direction = -1) +
+  facet_wrap(~CTU_NAME, scales = "free") +
+  theme_council_open() +
+  labs(y = "Square\nmiles\n(land)")
+
 ```
 
-
-GEE processing details. 
-
-<!-- Path 27 is on Landsat 9 cycle day 3; Landsat 8 cycle day 11. https://landsat.usgs.gov/landsat_acq#convertPathRow -->
-<!-- The east metro is path 26, it's on cycle day L9 = 12, L8 = 4 -->
-<!-- West metro is path 28, L9 = 10, L8 = 2 -->
 
 During the summer months, LandSat land surface temperatures and air temperatures line up pretty well at the airport (Figure \@ref(fig:temp-corr)). 
 
@@ -237,10 +220,6 @@ read_csv("./data/GEE_MSP_HeatHistory.csv",
 #   geom_hline(yintercept = 0) +
 #   theme_council_open() +
 #   geom_vline(xintercept = ymd("2016-07-26"))
-# 
-# 
-# # The primary features on Landsat 7 include a panchromatic band with 15 meter spatial resolution, an onboard full aperture solar calibrator, five percent absolute radiometric calibration, and a thermal infrared channel with a four-fold improvement in spatial resolution over Thematic Mapper (TM). Since June 2003, the sensor has acquired and delivered data with data gaps caused by the Scan Line Corrector (SLC) failure
-
 
 gee %>%
   filter(doy > yday(ymd("2020-05-01")),
@@ -254,7 +233,8 @@ gee %>%
   geom_smooth(method = "lm", fill = NA)+#, col = "black") +
   labs( x = "Airport air temperature",
         y = str_wrap("Airport land surface temperature", 10),
-        col = "Landsat") +
+        col = "Landsat",
+        caption = "Summer MSP airport land temperatures correlate with air temperatures.\nLandsat 7 data is only shown before the scan line error failure (pre 2003).") +
   scale_color_brewer(palette =  "Paired") +
   facet_wrap(~source)+
   guides(col = "none")
@@ -266,13 +246,32 @@ gee %>%
 
 ```
 
-### Results
+## Demographic data
 
-Let's discuss. It may not be the best idea to wait for the hottest heat wave in order to update the map (if that was the case, we should go back in time to 1980's). Instead, how can we start to think about shifting risk of extreme heat? Or how the area/s of the region at risk of extreme heat grow/shrink/move over time?
+The demographic data comes from a combination of 2020 decennial census and 2016-2020 five-year American Community Survey (ACS) estimates. The 2020 decennial census is a full count of the population, but has few variables (currently limited to race and total population counts). On the other hand, the ACS five-year estimates offer more detailed demographic variables (for instance income, age, and language variables), but reflects only a sample (survey) of the total population.
 
-Ideally, it would be great to just pick a summer day with low cloud cover, and look at the spatial patterns (do this for each year! back to 2013 would be easy "a decade of change", but we could go further back too). Would we want to look at ... difference (standard deviations?) from the regional mean temperature? Would it be a (communications/planning) problem that some areas are "colder" than the regional mean? 
+The 2020 decennial census data was accessed from the [MN Geospatial Commons](https://gisdata.mn.gov/dataset/us-mn-state-metc-society-census2020population) and used only for race variables. The 2016-2020 ACS data was accessed using the [tidycensus](https://github.com/walkerke/tidycensus) wrapper for the [Census Bureau's API](https://www.census.gov/programs-surveys/acs/data/data-via-api.html). 
 
-I am not totally sure how we will want to do this, other ideas would be super helpful!
+## Data processing details
+
+### Temperature 
+- Google Earth Engine
+- reference points, standard deviations
+- statistical methods? 
+
+### Demographics / other social variables
+
+- demographic methods
+- zillow ztrax
+- other?
+
+<!-- ### Results -->
+
+<!-- Let's discuss. It may not be the best idea to wait for the hottest heat wave in order to update the map (if that was the case, we should go back in time to 1980's). Instead, how can we start to think about shifting risk of extreme heat? Or how the area/s of the region at risk of extreme heat grow/shrink/move over time? -->
+
+<!-- Ideally, it would be great to just pick a summer day with low cloud cover, and look at the spatial patterns (do this for each year! back to 2013 would be easy "a decade of change", but we could go further back too). Would we want to look at ... difference (standard deviations?) from the regional mean temperature? Would it be a (communications/planning) problem that some areas are "colder" than the regional mean?  -->
+
+<!-- I am not totally sure how we will want to do this, other ideas would be super helpful! -->
 
 
 ```{r heatmap, fig.align = 'center', out.width = "70%", fig.cap = "Example heat map summer 2022", results='markup', include = F, eval = F}
@@ -341,23 +340,97 @@ tibble(start = c(150, 160, 170, 180, 190),
 
 ```
 
-# Social and economic *IMPACT* of extreme heat on residents
+# Results
+
+
+## Changing *RISK* of extreme heat
+
+### Historic temperature trends
+
+Minnesota's temperatures have been warming over the past century, with warming trends accelerating since 2000 (Figure \@ref(fig:mn-warmingstripes-avg)). Warmer winters and rising daily low temperatures strongly contribute to this trend. 
+
+```{r, mn-warmingstripes-avg}
+#| fig.cap = "Average temperatures in Minnesota from 1895-2021. Source NOAA and https://showyourstripes.info.",
+#| results='markup', 
+#| out.width= "5in",  
+#| out.extra='style="float:right"', 
+#| fig.align='right'
+
+knitr::include_graphics("./NORTH_AMERICA-USA-Minnesota-1895-2021-NO-barslabel.png")
+```
+
+Hotter summer temperatures are also a component of a warming world, and heat waves have direct consequences on human health. In Minnesota, warming summer trends (probably) include (Figure \@ref(fig:msp-temps)):
+
+- neither annual maximum temperatures nor average summer highs have changed much, but
+- heat waves (multiple days of extreme heat) are more common
+- daily minimum temperatures are warmer
+
+
+
+```{r, msp-temps, fig.asp = 1, out.width= "6in", fig.cap = "Summer air temperatures (May 1 - Oct 1) at MSP airport since records began at that station. The shaded box shows the years which overlap with Landsat satellite data availability. The horizontal red dashed line shows 100 degrees F, and the vertical grey dashed line indicates year 2016 which is currently used to quanify the risk of extreme heat across the Twin Cities region."}
+load("./data/msp_temps.rda")
+
+landsat_yrs <- tibble(datatype = c("TMAX", "TMIN"),
+                      lsy = c(88, 70), 
+                      lsyend = c(106, 90))
+
+msp_temps %>% filter(datatype %in% c("TMAX", "TMIN")) %>%
+  mutate(plot = if_else(datatype == "TMAX", max, mean)) %>%
+  bind_rows(msp_temps %>% filter(datatype == "TMAX") %>%
+              mutate(plot = mean,
+                     datatype = "TMAXmean")) %>%
+  filter(year != 2022) %>%
+  ggplot(aes(x = year, y = plot)) + #, col = doy
+  geom_hline(data = data.frame(datatype = "TMAX"), aes(yintercept = 100), lty = 2, col = "red") +
+  geom_vline(xintercept = 2016, lty = 2, col = "grey50") +
+  # geom_rect(data = data.frame(datatype = "TMAX"), aes(xmin = 1983, xmax = 2022, ymin = -Inf, ymax = Inf), alpha = 0.1, fill="grey", inherit.aes = FALSE) +
+  # geom_rect(data = data.frame(datatype = "TMIN"), aes(xmin = 1983, xmax = 2022, ymin = -Inf, ymax = Inf), alpha = 0.1, fill="grey", inherit.aes = FALSE) +
+  annotate("rect", xmin = 1983, xmax = 2022, ymin = -Inf, ymax = Inf, alpha = .1) +
+  geom_line(col = "grey 50") +
+  geom_point() +
+  councilR::theme_council_open() +
+  labs(y = "", #str_wrap("Air temperature", 10),
+       x = "", 
+       title = "MSP airport air temperature") +
+  scale_x_continuous(expand = c(.01,0)) +
+  scale_colour_gradient(
+    low = "#132B43",
+    high = "#56B1F7",
+    space = "Lab",
+    # guide = "legend",
+    aesthetics = "colour",
+    breaks=c(lubridate::yday(ymd("2022-06-01")), 
+             lubridate::yday(ymd("2022-07-01")),
+             lubridate::yday(ymd("2022-08-01")),
+             lubridate::yday(ymd("2022-09-01"))),
+    labels=c("June 1",
+             "July 1",
+             "Aug 1",
+             "Sept 1"),
+    name = "Date"
+  ) +
+  annotate("text", label = "2016", x = 2016, y = -Inf, vjust = -1) +
+  annotate("text", label = "Landsat era", x = 2005, y = Inf, vjust = 1) +
+  facet_wrap(~datatype, ncol = 1, scales = "free_y",
+             labeller = as_labeller(c(TMAX = "Hottest summer temperature recorded", 
+                                      TMIN = "Average summer lows",
+                                      TMAXmean = "Average summer highs"))) +
+  scale_y_continuous(labels = function(x) paste0(x, "°F"))
+
+#may - sept
+```
+
+## Extreme heat map
+
+Maybe not updating the 2016 map with 2021/2022 data, but instead adding more information? Decision can get made at the end of summer - we just need to see what heat events line-up with Landsat measurements this year. 
+
+## Social and economic *IMPACT* of extreme heat on residents
 
 Our [website indicates](https://metrocouncil.org/Communities/Planning/Local-Planning-Assistance/CVA/Extreme-Heat.aspx) "Human vulnerability to extreme heat is of concern for many stakeholders in the region, particularly county public health departments and agency partners." Let's explicitly connect the dots between demographic data and land surface temperature!
 
-## Methods
-
-The demographic data comes from a combination of 2020 decennial census and 2016-2020 five-year American Community Survey (ACS) estimates. The 2020 decennial census is a full count of the population, but has few variables (currently limited to race and total population counts). On the other hand, the ACS five-year estimates offer more detailed demographic variables (for instance income, age, and language variables), but reflects only a sample (survey) of the total population.
-
-The 2020 decennial census data was accessed from the [MN Geospatial Commons](https://gisdata.mn.gov/dataset/us-mn-state-metc-society-census2020population) and used only for race variables. The 2016-2020 ACS data was accessed using the [tidycensus](https://github.com/walkerke/tidycensus) wrapper for the [Census Bureau's API](https://www.census.gov/programs-surveys/acs/data/data-via-api.html). 
-
-The heat data comes from Landsat 8 thermal infrared sensor data measured on July, 22 2016. **Ideally this will be updated to 2022 data!**
+Indeed, certain populations have disproportionate exposure to extreme heat across our region. In particular: 
 
 *Would also be interested in thinking about total numbers of people, not just percents. Are there logical heat "bins" we can break the region into and then show the total number of people who are at risk (or who fall into those different bins). *
-
-## Results
-
-Across our region, certain populations have disproportionate exposure to extreme heat. In particular:
 
 ```{r process-demographics}
 process_demos <- FALSE

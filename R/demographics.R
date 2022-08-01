@@ -74,7 +74,7 @@ if (process_demos == TRUE) {
   
   acsapi_sums <- bind_rows(acs_age, acs_income)
   
-  acsapi <- get_acs(
+  acsapi_persons <- get_acs(
     geography = "block group",
     variables = c(
       pop_total = "B01001_001",
@@ -109,7 +109,9 @@ if (process_demos == TRUE) {
     bind_rows(acsapi_sums) %>%
     
     rename(bg20 = GEOID) %>%
-    select(-NAME) %>%
+    select(-NAME) 
+  
+  acsapi_percents <- acsapi_persons %>%
     pivot_wider(
       names_from = "variable",
       values_from = c("estimate", "moe"),
@@ -175,7 +177,8 @@ if (process_demos == TRUE) {
     #                            "income_pov_status", "income_below185pov",
     #                            "hhage_1personover65", "hh_1person"))  
 
-  
+  acsapi_percents
+  acsapi_persons
   # view(acsapi)
     # filter(variable %not_in% c("hh_total", "hh_1person", "hh_1personover65"))
 
@@ -247,6 +250,21 @@ if (process_demos == TRUE) {
     pivot_longer(names_to = "variable", values_to = "estimate",-bg20) %>%
     filter(variable %not_in% c("poptot_mc", "poptotal", "hutot_mc"))
   
+  census_persons <-
+    readxl::read_xlsx(unzip(temp, "Census2020PopulationBlockGroup.xlsx")) %>%
+    janitor::clean_names() %>%
+    transmute(
+      bg20 = geog_unit,
+      pblacknh = blacknh,
+      pasiannh = (asiannh + pacificnh) ,
+      phisppop = hisppop,
+      pamindnh = amindnh ,
+      pothmultnh = (multracenh + othernh),
+      pbipoc = poptotal - (whitenh)
+      
+    )  %>%
+    pivot_longer(names_to = "variable", values_to = "estimate",-bg20) 
+
   fs::file_delete("./Census2020PopulationBlockGroup.xlsx")
 
 
@@ -275,8 +293,10 @@ if (process_demos == TRUE) {
     "pothmultnh", "Race; % Other or Multiracial"
   )
   
-  demographics <- acsapi %>% #bind_rows(acsapi, acs_geospatial) %>%
-    bind_rows(census_race) %>%
+  demographics <- (acsapi_percents %>% add_column(type = "percents")) %>%
+    bind_rows(acsapi_persons %>% add_column(type = "persons"))%>% #bind_rows(acsapi, acs_geospatial) %>%
+    bind_rows(census_race %>% add_column(type = "percents")) %>%
+    bind_rows(census_persons %>% add_column(type = "persons")) %>%
     filter(!is.na(estimate)) %>% #not sure why there are nas
     full_join(var_names)
 
