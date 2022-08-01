@@ -158,9 +158,28 @@ dl_daily <- function(year, .station) {
 #######
 # dl weather data for years of interest -------
 #######
-metro_stations_daily <- map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id)))) %>%
+metro_stations_daily <- #c(paste0("GHCND:", metro_stations$id)) %>% 
+  (map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[2]))) %>%
+  bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[3]))) %>%
+  bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[4]))) %>%
+  # bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[5]))) %>%
+  # bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[6]))) %>%
+  bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[7]))) %>%
+  bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[8]))) %>%
+  bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[9]))) %>%
+  bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[10]))) %>%
+  bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[11]))) %>%
+  bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[12]))) %>%
+  bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[13]))) %>%
+  bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[14]))) %>%
+  bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[15]))) %>%
+  bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[16]))) %>%
+  bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[17]))) %>%
+  bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[18]))) %>%
+  bind_rows(map_dfr(.x = 2013:2022, ~dl_daily(year = .x, .station = c(paste0("GHCND:", metro_stations$id))[19]))) %>%
   mutate(year = lubridate::year(date))
 save(metro_stations_daily, file = "./data/metro_stations_daily.rda")
+
 
 msp_daily <- map_dfr(.x = 1938:2022, ~dl_daily(year = .x, .station = 'GHCND:USW00014922')) %>% 
   mutate(year = lubridate::year(date))

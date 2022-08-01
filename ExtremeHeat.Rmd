@@ -27,6 +27,21 @@ knitr::opts_chunk$set(
 
 ```
 
+get a refernce point; acres < ref temp, acres @ ref temp, acres > ref temp
+ggplot(aes(x = tempbin, y = acres, col = year)) +
+geom_bar()
+
+say we have FIVE reference points; calc mean and SD of ref point. 
+areas within 1 sd of reference temp; +-1sd (at reference), -2sd (cooler), +2sd (hotter)
+
+
+```{r}
+# On May 31, 2003, the Scan Line Corrector (SLC), which compensates for the forward motion of the satellite, failed.
+metro_stations_daily
+
+```
+
+
 # Action items
 
 1) COW meeting: big question is "with the Council's convening ability, could we pull together some shared definitions, consider developing a stakeholder group to guide this work? 
@@ -129,7 +144,50 @@ Landsat satellite introduction. Various missions, sensor details, etc.
 
 Issues with Landsat include clouds (water vapor between the satellite and the ground make the pixels seem much cooler, so we can't rely on data with clouds), smoke cover, etc. 
 
-Details on how often we get pictures of our area. Landsats 8/9 circle earth every 16 days. The entirety of our region is covered by path 27, row 28-29. The east metro is also on path 26, and the west metro is also on path 28. This means that extreme heat events don't always line up with when we get satellite data. 
+Details on how often we get pictures of our area. Landsats 8/9 circle earth every 16 days. This means that extreme heat events don't always line up with when we get satellite data. Prior to the launch of Landsat 8, there was a decade of years where landsat 7 operated with a scan line error (June 2003 - Feb 2013). 
+  - Landsat specifics
+    - The entirety of our region is covered by path 27, row 28-29. 
+    - The east metro is also on path 26, and the west metro is also on path 28. 
+
+```{r}
+landsat8dates <- seq(from = ymd("2013-05-11"), to = ymd("2022-11-01"), by = "16 days")
+landsat9dates <- seq(from = ymd("2021-11-01"), to = ymd("2022-11-01"), by = "16 days")
+
+
+remove <- metro_stations_daily %>%
+  mutate(month = month(ymd(date))) %>% 
+  filter(month >= 5, month <= 9, 
+         datatype == "TMAX",
+         ymd(date) %in% c(landsat8dates, landsat9dates))  %>%
+  complete(date, station) %>%
+  filter(is.na(value)) %>%
+  select(station) %>%
+  unique()
+  
+df <- metro_stations_daily %>%
+  mutate(month = month(ymd(date))) %>% 
+  filter(month >= 5, month <= 9, 
+         datatype == "TMAX",
+         ymd(date) %in% c(landsat8dates, landsat9dates)) %>% #filter(date == ymd('2022-05-28'))#,
+         # station %not_in% c(remove$station)) #%>% 
+  group_by(date) %>%
+  summarise(MEAN = mean(value), SD = sd(value), n_stations = n()) %>%
+  filter(MEAN >= 85) 
+
+df %>%
+  ggplot(aes(x = ymd(date), y = MEAN)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = MEAN - SD, ymax = MEAN + SD)) +
+  geom_point(data = filter(df, date == ymd("2016-07-22")), col = "brown2", size = 3) +
+  theme_council_open() +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
+  # ggplot(aes(x = date, y = value, col = station)) +
+  # geom_point() #+
+  # # geom_errorbar(aes())
+
+metro_stations %>% select(latitude, longitude, name) %>% write_csv(file = "./data/export_stations_gee.csv")
+```
+
 
 GEE processing details. 
 
