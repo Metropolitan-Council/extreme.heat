@@ -51,9 +51,9 @@ Temperature sensing has been a component of the Landsat satellite missions since
 
 While broad patterns in land temperature can be studied back to 1982 using all Landsat satellite data, more detailed patterns in temperature are best explored from with Landsats 8 and 9 (2013 - present), primarily because of improvements in spatial resolution. Both satellites image the Twin Cities region every 16 days. Since the launch of Landsat 9 in the fall of 2021, this means that high quality temperature data is available for our region every 8 days. 
 
-The entire Twin Cities region is covered by Landsat path 27, row 28-29. The east metro is also on path 26, and the west metro is also on path 28. Because the entire region is not measured every day, this means that extreme heat events don't always line up with when we get satellite data. Additionally, cloudy days (water vapor between the satellite and the ground make the pixels seem much cooler, so we can't rely on data with clouds) or days with heavy smoke cover do not produce useable temperature data.
+The entire Twin Cities region is covered by Landsat path 27, row 28-29. The east metro is also on path 26, and the west metro is also on path 28. Because the entire region is not measured every day, this means that extreme heat events don't always line up with when we get satellite data. Additionally, cloudy days (water vapor between the satellite and the ground make the pixels seem much cooler, so we can't rely on data with clouds) or days with heavy smoke cover do not produce usable temperature data.
 
-## Land surface temperature versus air temperature
+### Land surface temperature versus air temperature
 
 Not the same thing, but well correlated. 
 
@@ -139,41 +139,7 @@ position = position_dodge(width = .4))+
   
   
   
-acres_heat <- read_csv(
-  paste0("./data/metc_extremeheat/", list.files("./data/metc_extremeheat/", pattern = "heatmeans")),
-  col_select = c(year, CTU_NAME, sq_miles),
-  id = "year"
-  ) %>%
-  mutate(year = as.numeric(str_remove_all(year, ("./data/metc_extremeheat/heatmeans_|.csv"))),
-         sq_miles = str_remove_all(sq_miles, "\\{groups=\\[|\\}|\\{|tempbin\\=[123456],|\\]|, | ")) %>%
-  separate(sq_miles, sep = c("sum="), 
-           into = c("na", "coolest", "cool", "average", "hot", "hottest")) %>% #into = as.character(seq(0, 5))) %>%
-  select(-na) %>%# select(-`0`) 
-  pivot_longer(names_to = "tempbin", values_to = "acres", -c(year, CTU_NAME)) %>%
-  mutate(acres = as.numeric(acres)) %>%
-  mutate(tempbin = factor(tempbin, levels=c("coolest", "cool", "average", "hot", "hottest")))
 
-acres_heat %>%
-  group_by(year, tempbin) %>%
-  summarise(acres = sum(acres, na.rm = T)) %>%
-  ggplot(aes(x = as.character(year), y = acres, fill = tempbin)) +
-  geom_bar(stat = "identity", position = "stack") +
-  scale_fill_brewer(palette = "RdBu", direction = -1) +
-  # facet_wrap(~CTU_NAME, scales = "free") +
-  theme_council_open() + 
-  labs(title = "7-county region", y = "Square\nmiles\n(land)",
-       x = "Year", fill = "temperature",
-       caption = "Temperature bins are in relation to 14 reference sites, NOAA temperatures.\nAverage = within 0.5 standard deviations of reference site temperature.\nCool/hot are within 1 sd, and coolest/hottest are > 1 sd away from reference site temperature.")
-
-
-acres_heat %>%
-  filter(str_detect(CTU_NAME, "Minneapolis|Elmo|Maplewood|Woodbury")) %>%
-  ggplot(aes(x = as.character(year), y = acres, fill = tempbin)) +
-  geom_bar(stat = "identity", position = "stack") +
-  scale_fill_brewer(palette = "RdBu", direction = -1) +
-  facet_wrap(~CTU_NAME, scales = "free") +
-  theme_council_open() +
-  labs(y = "Square\nmiles\n(land)")
 
 ```
 
@@ -246,24 +212,27 @@ gee %>%
 
 ```
 
-## Demographic data
+### Data processing; statistics
+
+GEE, reference points, standard deviations
+
+## Demographic and social data
+
+### Census
 
 The demographic data comes from a combination of 2020 decennial census and 2016-2020 five-year American Community Survey (ACS) estimates. The 2020 decennial census is a full count of the population, but has few variables (currently limited to race and total population counts). On the other hand, the ACS five-year estimates offer more detailed demographic variables (for instance income, age, and language variables), but reflects only a sample (survey) of the total population.
 
 The 2020 decennial census data was accessed from the [MN Geospatial Commons](https://gisdata.mn.gov/dataset/us-mn-state-metc-society-census2020population) and used only for race variables. The 2016-2020 ACS data was accessed using the [tidycensus](https://github.com/walkerke/tidycensus) wrapper for the [Census Bureau's API](https://www.census.gov/programs-surveys/acs/data/data-via-api.html). 
 
-## Data processing details
+### Ztrax
 
-### Temperature 
-- Google Earth Engine
-- reference points, standard deviations
-- statistical methods? 
+air conditioning
 
-### Demographics / other social variables
+## Land cover
 
-- demographic methods
-- zillow ztrax
-- other?
+Should we bring in 2016 - 2020 land use cover/change (uh, yeah, probably! if we want to mechanistically explain any changes this would be super helpful!). This could either be a path analysis by block group (land cover + temp --> mechanism), or scatter plot (cool acres lost vs impervious land cover gained). Or just even a simple, overall summary - regional temp change summary + regional land use change summary.
+
+Also greenspace stuff should be described here. 
 
 <!-- ### Results -->
 
@@ -424,13 +393,87 @@ msp_temps %>% filter(datatype %in% c("TMAX", "TMIN")) %>%
 
 Maybe not updating the 2016 map with 2021/2022 data, but instead adding more information? Decision can get made at the end of summer - we just need to see what heat events line-up with Landsat measurements this year. 
 
+### "Losing our cool"
+
+Since 2016, the region's coolest areas are disappearing (68% of the region down to 51%; Figure \@ref(fig:region-land-tempbin)). If we take the temperature of some reference sites around the region (**let's think about what actually makes sense here for reference sites**) and look at the amount of the region's land which is at least 1 standard deviation cooler than the reference sites, we've lost those cool areas. It also looks like we might have had a decrease in the hottest areas (areas with temps more than 1 standard deviation above the reference sites; 6.4 down to 2.8%), which tells me that *maybe* the prior extreme heat work impacted planning meaningfully. 
+
+Of course, these results are pretty dependent on getting the reference sites right! So all of this should get recalculated/analyzed once that is figured out. 
+
+
+```{r, region-land-tempbin}
+#| fig.cap = "Total land area of the region which falls into different temperature bins (relative to reference site temperatures). ",
+#| results='markup', 
+#| out.width= "6in",  
+#| out.extra='style="float:right"', 
+#| fig.align='right',
+#| fig.asp = .8
+
+acres_heat <- read_csv(
+  paste0("./data/metc_extremeheat/", list.files("./data/metc_extremeheat/", pattern = "heatmeans")),
+  col_select = c(year, CTU_NAME, sq_miles),
+  id = "year"
+  ) %>%
+  mutate(year = as.numeric(str_remove_all(year, ("./data/metc_extremeheat/heatmeans_|.csv"))),
+         sq_miles = str_remove_all(sq_miles, "\\{groups=\\[|\\}|\\{|tempbin\\=[123456],|\\]|, | ")) %>%
+  separate(sq_miles, sep = c("sum="), 
+           into = c("na", "coolest", "cool", "average", "hot", "hottest")) %>% #into = as.character(seq(0, 5))) %>%
+  select(-na) %>%# select(-`0`) 
+  pivot_longer(names_to = "tempbin", values_to = "miles", -c(year, CTU_NAME)) %>%
+  mutate(miles = as.numeric(miles)) %>%
+  mutate(tempbin = factor(tempbin, levels=c("hottest", "hot", "average", "cool", "coolest")))
+
+acres_heat %>%
+  group_by(year, tempbin) %>%
+  summarise(miles = sum(miles, na.rm = T)) %>%
+   ungroup() %>% group_by(year) %>%
+   mutate(total = sum(miles),
+          label = paste0(round(miles / total *100, 1), "%"),
+          lab_y = miles / total) %>%
+  filter(year > 2013) %>%
+  ggplot(aes(x = as.character(year), y = miles, fill = tempbin)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_brewer(palette = "RdBu") +
+  # facet_wrap(~CTU_NAME, scales = "free") +
+  theme_council_open() + 
+  theme(legend.position = "bottom") +
+    geom_text(aes(label = if_else(lab_y <.05, NA_character_, label), y = miles), position = "stack", vjust = 1.5,
+        size = 3) +
+  labs(title = "7-county region", y = "Square\nmiles\n(land)",
+       x = "", fill = "temperature",
+       caption = "Temperature bins are in relation to 14 reference sites, NOAA temperatures.\nAverage = within 0.5 standard deviations of reference site temperature.\nCool/hot are within 1 sd, and coolest/hottest \nare > 1 sd away from reference site temperature.")
+# 
+# 
+# acres_heat %>%
+#   filter(str_detect(CTU_NAME, "Minneapolis|Elmo|Maplewood|Woodbury")) %>%
+#   ggplot(aes(x = as.character(year), y = acres, fill = tempbin)) +
+#   geom_bar(stat = "identity", position = "stack") +
+#   scale_fill_brewer(palette = "RdBu", direction = -1) +
+#   facet_wrap(~CTU_NAME, scales = "free") +
+#   theme_council_open() +
+#   labs(y = "Square\nmiles\n(land)")
+
+```
+
+```{r}
+#| fig.cap = "Regional temperature bins (relative to reference site temperatures). ",
+#| results='markup', 
+#| out.width= "3.3in",  
+#| out.extra='style="float:right"', 
+#| fig.align='right',
+#| fig.asp = .3
+#| 
+knitr::include_graphics("./hottest_by_year/labeled/bin_2016.png") 
+knitr::include_graphics("./hottest_by_year/labeled/bin_2021.png")
+
+```
+
 ## Social and economic *IMPACT* of extreme heat on residents
 
 Our [website indicates](https://metrocouncil.org/Communities/Planning/Local-Planning-Assistance/CVA/Extreme-Heat.aspx) "Human vulnerability to extreme heat is of concern for many stakeholders in the region, particularly county public health departments and agency partners." Let's explicitly connect the dots between demographic data and land surface temperature!
 
-Indeed, certain populations have disproportionate exposure to extreme heat across our region. In particular: 
+Indeed, certain populations have disproportionate exposure to extreme heat across our region. Below, we show the percent population in each of the regions 4822 census block groups (2020 vintage geographies) according to various demographic attributes. We also show the region's total population which lives in various temperature exposure areas. 
 
-*Would also be interested in thinking about total numbers of people, not just percents. Are there logical heat "bins" we can break the region into and then show the total number of people who are at risk (or who fall into those different bins). *
+**Logically, it would make sense to update the temperature data to be 2021/2022 values here**
 
 ```{r process-demographics}
 process_demos <- FALSE
@@ -512,7 +555,8 @@ heat_demo_plot <- function(x) {
     ) +
     labs(x = "Average land temperature during 2016 heat wave",
          y = "", title = "Block group percents",
-         caption = str_wrap(paste0(first(x$source)), width = 60))
+         caption = str_wrap(paste0(first(x$source)), width = 60)) +
+    theme(plot.title = element_text(size = 10, face = "bold") )
 }
 
 
@@ -535,38 +579,41 @@ df1 <- filter(demographics, data == "percents") %>% full_join(heat) %>%
                              heat2016 < 100 ~ "95-99",
                              # heat2016 < 105 ~ "<105",
                              TRUE ~ "100+")) %>%
-    mutate(tempbin = factor(tempbin, levels=c("<85", "85-89", "90-94", "95-99", "100+")))
+    mutate(tempbin = factor(tempbin, levels=c("100+", "95-99", "90-94", "85-89", "<85"))) %>% 
+    arrange(tempbin) %>%
+   group_by(type, variable, tempbin, name) %>%
+   summarise(persons = sum(estimate)) %>%
+  ungroup() %>% group_by(variable) %>% mutate(totaln = sum(persons)) %>%
+  mutate(label = paste0(round(persons / totaln *100, 1), "%"),
+         lab_y = persons/totaln,
+         label_y = cumsum(persons/totaln)) 
 
 heat_persons_plot <- function(x) {
- x %>% 
-   group_by(variable, tempbin, name) %>%
-   summarise(persons = sum(estimate)) %>%
+ # filter(df1, type == "Age")  %>%
+  x %>%
    # complete()
     ggplot(aes(y = persons, x = name, fill = tempbin)) +
     geom_bar(stat = "identity", position = "fill") +
-    facet_wrap( ~ name,
-                scales = "free",
-                labeller = label_wrap_gen((width = 25))) +
+    # facet_wrap( ~ name,
+    #             scales = "free",
+    #             labeller = label_wrap_gen((width = 25))) +
     theme_council_open() +
-  scale_fill_brewer(palette = "RdBu", direction = -1) +
-    # scale_x_continuous(
-    #   labels = function(x)
-    #     paste0(x, "°F"),
-    #   breaks = seq(80, 100, by = 5),
-    #   limits = c(80, 105),
-    #   expand = c(.01, .01)
-    # ) #+
-   theme(axis.text.x = element_blank(),
+  scale_fill_brewer(palette = "RdBu")+#, direction = -1) +
+   scale_x_discrete(labels = scales::wrap_format(25)) +
+   theme(#axis.text.x = element_blank(),
+         plot.title = element_text(size = 10, face = "bold") ,
          legend.position = "bottom")+
    scale_y_continuous(labels = scales::percent) +
+  geom_text(aes(label = if_else(lab_y <.05, NA_character_, label), y = lab_y),position = "stack", vjust = 1.5,
+        size = 3) +
     labs(y = "", x = "", fill = "Temperature", title = "Regional totals",
-         caption = str_wrap(paste0(first(x$source)), width = 60))
+         caption = str_wrap(paste0(first(x$source)), width = 60)) 
 }
 ```
 
 ### Age
 
-Neither younger (under age 18) or older (65 or above) age groups who have increased sensitivity to extreme heat appear to be at an increased risk of exposure (Figure \@ref(fig:age-fig)). About 25% of the region's total population of a sensitive age lives in a block group with temperatures over 95 degrees.
+Neither younger (under age 18) or older (65 or above) age groups who have increased sensitivity to extreme heat appear to be at an increased risk of exposure (Figure \@ref(fig:age-fig)). About 20% of the region's total population of a sensitive age lives in a block group with temperatures over 95 degrees.
 
 ```{r, age-fig}
 #| fig.cap = "Relationship between resident age and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region. The blue line shows the trend line from a generalized additive model.",
@@ -574,7 +621,7 @@ Neither younger (under age 18) or older (65 or above) age groups who have increa
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
 #| fig.align='right',
-#| fig.asp = 1
+#| fig.asp = 1.3
 (filter(df, type == "Age") %>% 
   heat_demo_plot() +
   scale_y_continuous(labels = scales::percent)) /
@@ -587,7 +634,7 @@ filter(df1, type == "Age") %>%
 
 ### Communications (language and internet)
 
-Hotter areas have greater percentages of residents who do not speak English at home. Hotter areas also have greater percentages of residents without internet at home. This indicates the value of communicating about heat warnings and mitigation strategies (e.g., location and hours of cooling centers) in multiple languages and via multiple platforms (Figure \@ref(fig:lang-fig)). 
+Hotter areas have greater percentages of residents who do not speak English at home. Hotter areas also have greater percentages of residents without internet at home. This indicates the value of communicating about heat warnings and mitigation strategies (e.g., location and hours of cooling centers) in multiple languages and via multiple platforms (Figure \@ref(fig:lang-fig)). Over 30% of the region's total population without internet at home lives in areas with extreme heat in excess of 95 degrees, while only about 20% of the region's total population with internet lives in similarly hot areas. 
 
 
 
@@ -597,7 +644,7 @@ Hotter areas have greater percentages of residents who do not speak English at h
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
 #| fig.align='right',
-#| fig.asp = 1.2
+#| fig.asp = 1.3
 (filter(df, type == "Communications",
         name != "Communications; % accessing internet via cellphone only") %>% 
   heat_demo_plot() +
@@ -612,7 +659,7 @@ filter(df1, type == "Communications",
 
 ### Household size
 
-People are more likely to be living alone (household size of 1) in areas with greater exposure to extreme heat (Figure \@ref(fig:hh-fig)). Over 25% of our region's 1-person households live in areas which can experience heat of 95 degrees or more. Social cohesion/connections can impact human vulnerability to extreme heat. From a safety perspective, people are always advised to check in on family and friends living alone during heat waves. Living alone may put people at an elevated risk. Fortunately, it does not seem that elders living alone have greater risk.
+People are more likely to be living alone (household size of 1) in areas with greater exposure to extreme heat (Figure \@ref(fig:hh-fig)). About 30% of our region's 1-person households live in areas which can experience heat of 95 degrees or more. Social cohesion/connections can impact human vulnerability to extreme heat. From a safety perspective, people are always advised to check in on family and friends living alone during heat waves. Living alone may put people at an elevated risk. Fortunately, it does not seem that elders living alone have greater risk.
 
 ```{r, hh-fig}
 #| fig.cap = "Relationship between household size and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region. The blue line shows the trend line from a generalized additive model.",
@@ -620,10 +667,10 @@ People are more likely to be living alone (household size of 1) in areas with gr
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
 #| fig.align='right',
-#| fig.asp = .7
-filter(df, type == "Households") %>% 
+#| fig.asp = 1.3
+(filter(df, type == "Households") %>% 
   heat_demo_plot() +
-  scale_y_continuous(labels = scales::percent)
+  scale_y_continuous(labels = scales::percent))/
 
 filter(df1, type == "Households") %>% 
   heat_persons_plot() +
@@ -640,7 +687,7 @@ There are disparities in exposure to extreme heat with income. Lower income area
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
 #| fig.align='right',
-#| fig.asp = .7
+#| fig.asp = .6
 filter(df, type == "Income") %>% 
   heat_demo_plot() +
   scale_y_continuous(labels = scales::dollar)
@@ -650,7 +697,7 @@ filter(df, type == "Income") %>%
 
 ### Race
 
-Areas where a greater percent of residents identify as a person of color tend to be hotter. Native American (American Indian) residents seem to be disproportionately impacted with nearly 75% of the regions population who identifies as Native American living in block groups with temperatures capable of exceeding 100 degrees (Figure \@ref(fig:race-fig)).
+Areas where a greater percent of residents identify as a person of color tend to be hotter. Native American (American Indian) residents seem to be disproportionately impacted with nearly 72% of the regions population who identifies as Native American living in block groups with temperatures capable of exceeding 100 degrees and another 11% living in block groups with temperatures over 95 degrees (Figure \@ref(fig:race-fig)).
 
 
 ```{r, race-fig}
@@ -658,7 +705,8 @@ Areas where a greater percent of residents identify as a person of color tend to
 #| results='markup', 
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
-#| fig.align='right'
+#| fig.align='right',
+#| fig.asp = 1.6
 (filter(df, type == "Race") %>% 
   heat_demo_plot() +
   scale_y_continuous(labels = scales::percent))/
@@ -670,7 +718,7 @@ filter(df1, type == "Race") %>%
 
 ### Tenure
 
-Areas were more residents are renters are disproportionately hotter. This may indicate the need for particular types of mitigation strategies if renters have less agency to make structural (i.e., installing air conditioning units) or environmental (i.e., planting trees or landscaping interventions) changes to reduce heat exposure (Figure \@ref(fig:tenure-fig)).
+Areas were more residents are renters are disproportionately hotter. This may indicate the need for particular types of mitigation strategies if renters have less agency to make structural (i.e., installing air conditioning units) or environmental (i.e., planting trees or landscaping interventions) changes to reduce heat exposure (Figure \@ref(fig:tenure-fig)). About 45% of the region's total renters live in areas with temperatures over 95 degrees while less than 15% of the region's owners live in similarily hot areas. 
 
 <!-- Interestingly, the median utility cost for renters is lower in areas which are hotter. There may be some confounding factors going on however. For instance, utility costs may be low if some options for heating or cooling are not available (utility cost cannot be parsed by heating or cooling costs), and utility cost may be a function of preferences rather than energy efficiency.  -->
 
@@ -681,7 +729,7 @@ Areas were more residents are renters are disproportionately hotter. This may in
 #| out.width= "6in",  
 #| out.extra='style="float:right"', 
 #| fig.align='right',
-#| fig.asp = .7
+#| fig.asp = 1.3
 # knitr::include_graphics("./figs/Tenure.png")
 (filter(df, type == "Tenure", 
        !str_detect(name, "utility")) %>% 
@@ -694,9 +742,6 @@ Areas were more residents are renters are disproportionately hotter. This may in
 filter(df1, type == "Tenure", 
        !str_detect(name, "utility")) %>% 
   heat_persons_plot() +
-    facet_wrap( ~ name,
-                # scales = "free_y",
-                labeller = label_wrap_gen((width = 25))) +
   scale_y_continuous(labels = scales::percent)
 ```
 
@@ -711,7 +756,7 @@ If rising temperatures are inevitable, how are residents/cities going to adapt/m
 
 **ADD OVERLAY MAPS** to the storymap! (kind of like how land use is there now, but try to be more explicit? think about how the data could be compelling to inform landscape architecture, etc.)
 
-### Air conditioning in residences
+### Air conditioning in residences - NOT DONE
 
 These data come from ztrax. The percent of residences which have some type of cooling system.
 
@@ -766,11 +811,13 @@ mtcars %>%
         strip.text.y.left = element_text(angle = 0))
 ```
 
-### Greenspace
+### Greenspace - NOT DONE
 
 Plants can cool areas via shade and/or evapotranspiration (Figure \@ref(fig:greenspace-fig)). 
 
 Tree canopy is a little stranger. It falls apart only in deeply agricultural areas, where greenness is high (thanks to corn/soybeans) and temps are pretty low...but tree canopy is also very low (because it's cropland and not forest). Could probably show the relationship between trees and temperatures for urban/suburban areas and just exclude agricultural areas. 
+
+Would also be great to show areas which have lost tree canopy. 
 
 ```{r greenspace-fig}
 #| fig.cap = "Relationship between greenspace and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region.",
@@ -830,6 +877,11 @@ How does landscaping impact heat? Consider:
 Anything with co-morbidities. 
 
 Check out that study in Baltimore about heat and deaths - are there cool links we can make for our region?
+
+- https://www.sciencedirect.com/science/article/pii/S030438002100123X
+- Extremely hot days are those with daily minimum temperature at or greater than the 99th percentile. The minimum temperature is used as an indication of nighttime relief from heat
+
+
 
 ## Grassroots efforts
 
