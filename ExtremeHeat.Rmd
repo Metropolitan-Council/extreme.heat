@@ -11,8 +11,8 @@ urlcolor: blue
 ---
 
 ```{r include = F}
-library(tidyverse)
-library(lubridate)
+# library(tidyverse)
+library(lubridate); library(dplyr); library(readr); library(ggplot2)
 library(councilR)
 library(tidycensus)
 library(patchwork)
