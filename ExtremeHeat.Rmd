@@ -3,7 +3,7 @@ title: "Synthesizing the impact of extreme heat waves on the Twin Cities region"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
   bookdown::word_document2:
-    reference_docx: "../RSEA/wordtemplate.docx"
+    reference_docx: "../councilR/inst/rmarkdown/templates/word_documents/wordtemplate.docx"
     toc: true
     toc_depth: 4
 always_allow_html: true
