@@ -12,7 +12,7 @@ urlcolor: blue
 
 ```{r include = F}
 # library(tidyverse)
-library(lubridate); library(dplyr); library(readr); library(ggplot2)
+library(lubridate); library(dplyr); library(readr); library(ggplot2); library(tidyr); library(stringr)
 library(councilR)
 library(tidycensus)
 library(patchwork)
@@ -135,11 +135,6 @@ position = position_dodge(width = .4))+
   
   avg_heat %>%filter(year == 2021) %>%
     arrange(-avg_lst)
-  
-  
-  
-  
-
 
 ```
 
@@ -499,7 +494,7 @@ source("./R/heat.R")
 # 
 # df %>%
 #   purrr::map(~ggsave(paste0("figs/", first(.$type),'.png'), height = 3, width = 6, units = "in", dpi = 200,
-#               ggplot(., aes(y = estimate, x = heat2016))+
+#               ggplot(., aes(y = estimate, x = heat2022))+
 #       geom_point(alpha = .1, pch = 21, size = .5) +
 #                 facet_wrap(~.$name,
 #                            scales = "free_y",
@@ -510,7 +505,7 @@ source("./R/heat.R")
 #   scale_y_continuous(labels = if (any(.$labels == "dollar")) scales::dollar else scales::percent) +
 #     scale_x_continuous(labels = function(x) paste0(x, "°F"), breaks = seq(80, 100, by = 5), limits = c(80, 105), expand = c(.01, .01))+
 #   # scale_y_continuous(labels = ~ if (any(.$.x > 1e3)) scales::dollar(.$.x) else .$.x) +
-#   labs(x = "Average land temperature during 2016 heat wave",
+#   labs(x = "September 2022 land temperature",
 #        y = "",
 #        caption = str_wrap(paste0(first(.$source)), width = 60))
 #        # caption = "Sources: 2020 decennial census, 2016-2020 American Community Survey, 2016 Landsat") #+
@@ -531,13 +526,16 @@ df <- filter(demographics, data == "percents") %>% full_join(heat) %>%
                             TRUE ~ "percent"),
          height = case_when(type == "Race" ~ 6,
                             TRUE ~ 3)) %>%
-  filter(!is.na(name), variable != "income_below185pov_percent")# %>%
+  filter(!is.na(name), variable != "income_below185pov_percent") %>%
+  mutate(name = gsub(".*;", "", name),
+         name = gsub("%", "", name),
+         name = str_to_sentence(name))
   # group_by(type) %>% mutate(test = nlevels())
   # group_split(type)
 
 heat_demo_plot <- function(x) {
   x %>%
-    ggplot(aes(y = estimate, x = heat2016)) +
+    ggplot(aes(y = estimate, x = heat2022)) +
     geom_point(alpha = .1,
                pch = 21,
                size = .5) +
@@ -553,7 +551,7 @@ heat_demo_plot <- function(x) {
       limits = c(80, 105),
       expand = c(.01, .01)
     ) +
-    labs(x = "Average land temperature during 2016 heat wave",
+    labs(x = "September 2022 land temperature",
          y = "", title = "Block group percents",
          caption = str_wrap(paste0(first(x$source)), width = 60)) +
     theme(plot.title = element_text(size = 10, face = "bold") )
@@ -573,13 +571,13 @@ df1 <- filter(demographics, data == "percents") %>% full_join(heat) %>%
          height = case_when(type == "Race" ~ 6,
                             TRUE ~ 3)) %>%
   filter(!is.na(name), variable != "income_below185pov_percent") %>%
-  mutate(tempbin = case_when(heat2016 < 85 ~ "<85",
-                             heat2016 < 90 ~ "85-89",
-                             heat2016 < 95 ~ "90-94",
-                             heat2016 < 100 ~ "95-99",
-                             # heat2016 < 105 ~ "<105",
-                             TRUE ~ "100+")) %>%
-    mutate(tempbin = factor(tempbin, levels=c("100+", "95-99", "90-94", "85-89", "<85"))) %>% 
+  mutate(tempbin = case_when(heat2022 < 70 ~ "<70",
+                             heat2022 < 75 ~ "70-74",
+                             heat2022 < 80 ~ "75-79",
+                             heat2022 < 85 ~ "80-84",
+                             # heat2022 < 105 ~ "<105",
+                             TRUE ~ "85+")) %>%
+    mutate(tempbin = factor(tempbin, levels=c("85+", "80-84", "75-79", "70-74", "<70"))) %>% 
     arrange(tempbin) %>%
    group_by(type, variable, tempbin, name) %>%
    summarise(persons = sum(estimate)) %>%
@@ -707,11 +705,14 @@ Areas where a greater percent of residents identify as a person of color tend to
 #| out.extra='style="float:right"', 
 #| fig.align='right',
 #| fig.asp = 1.6
-(filter(df, type == "Race") %>% 
+(df %>%
+   filter(type == "Race") %>%
+   mutate(name = stringr::str_remove_all(name, "Race; % ")) %>% 
   heat_demo_plot() +
   scale_y_continuous(labels = scales::percent))/
 
 filter(df1, type == "Race") %>% 
+  mutate(name = stringr::str_remove_all(name, "Race; total ")) %>%
   heat_persons_plot() +
   scale_y_continuous(labels = scales::percent)
 ```
@@ -773,10 +774,10 @@ load("./data/noAC.rda")
 
 noAC %>%
   inner_join(heat) %>%
-  ggplot(aes(x = heat2016, y = percent_noAC)) +
+  ggplot(aes(x = heat2022, y = percent_noAC)) +
   geom_point(alpha= .5) +
   theme_council_open() +
-  labs(x = "Average land temperature during 2016 heat wave",
+  labs(x = "September 2022 land temperature",
        y = str_wrap("Percent of residences without air conditioning", 10),
        caption = "Source: Zillow ZTRAX")
 
@@ -834,7 +835,7 @@ green_heat <- environment %>%
   right_join(heat)
 
 green_heat %>%
-  ggplot(aes(x = heat2016, y = value)) +
+  ggplot(aes(x = heat2022, y = value)) +
   geom_point(alpha = .2) +
   geom_smooth(fill = NA, color = colors$councilBlue) +
     theme_council_open() +
@@ -846,7 +847,7 @@ green_heat %>%
       expand = c(.01, .01)
     ) +
   facet_wrap(~name, scales = "free_y") +
-    labs(x = "Average land temperature during 2016 heat wave",
+    labs(x = "September 2022 land temperature",
          y = "", #str_wrap("Average land greenness (NDVI 2021)",width = 20),
          caption = str_wrap("Sources: 2021 Sentinel-2 imagery;\nJuly 22, 2016 Landsat 8 thermal infared sensor", width = 60))
 
