@@ -21,11 +21,8 @@ if (process_demos == TRUE) {
   
   census_api_key(Sys.getenv("CENSUS_KEY"))
   
-  v20 <- load_variables(2020, "acs5", cache = TRUE)
-  View(v20 %>% filter(geography == "block group"))
-  # v20 %>% filter(label == "Estimate!!Total:",
-  #                geography == "block group",
-  #                str_detect(concept, "HOUSE"))
+  v20 <- load_variables(2021, "acs5", cache = TRUE)
+  # View(v20 %>% filter(geography == "block group"))
   #  you may need to access the table shells: https://www.census.gov/programs-surveys/acs/technical-documentation/table-shells.html
   #  census reporter topics are also very useful! https://censusreporter.org/topics/
 
@@ -36,7 +33,7 @@ if (process_demos == TRUE) {
       survey = "acs5",
       state = "MN",
       county = c("Anoka", "Carver", "Dakota", "Hennepin", "Ramsey", "Scott", "Washington"),
-      year = 2020) %>%
+      year = 2021) %>%
       group_by(GEOID) %>%
       summarise(sumest = sum(estimate),
                 summoe = moe_sum(moe, estimate)) %>%
@@ -105,7 +102,7 @@ if (process_demos == TRUE) {
     survey = "acs5",
     state = "MN",
     county = c("Anoka", "Carver", "Dakota", "Hennepin", "Ramsey", "Scott", "Washington"),#c("003", "019", "037", "053", "123", "139", "163"),
-    year = 2020
+    year = 2021
   ) %>%
     bind_rows(acsapi_sums) %>%
     
@@ -179,7 +176,7 @@ if (process_demos == TRUE) {
     # mutate(flag = if_else(estimate - moe <= 0, 1, NA_real_)) %>% #remove instances where moe overlaps with zero; ACTUALLY, what to do when the percent IS zero?!?! (percent english, or something)
     # filter(is.na(flag),) %>% select(-flag) %>%
     filter(str_detect(variable, "percent|income|tenure_utilitycost")) %>%
-    filter(variable %not_in% c("income_povstatus", "income_below185pov",
+    filter(variable %not_in% c("income_povstatus", #"income_below185pov",
                                "tenure_grossrent", "tenure_contractrent"))
     # filter(!str_detect(variable, "_total"), #remove variables used only to calculate percentages
     #        variable %not_in% c("age_sensitive",
