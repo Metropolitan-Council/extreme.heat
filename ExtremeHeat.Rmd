@@ -39,9 +39,7 @@ knitr::opts_chunk$set(
 
 The Metropolitan Council provides local planning assistance for communities across the Twin Cities region. As part of this assistance, the Council provides an “Extreme Heat Mapping Tool” for the Twin Cities. This tool shows the land surface temperature during the historic July 2016 heat wave and was created from remote-sensing data (Landsat 8). This dataset has proved particularly valuable as communities evaluate and plan for climate change adaptation techniques, future development and land use planning, and also undertake immediate interventions to reduce heat-related health consequences. 
 
-Something about connections between heat and urban planning. 
-
-The goal of this project is to do a major addition to the existing body of work. We hope to better integrate the consequences of climate change into city planning and policy decisions, give stakeholders tools to act on mitigating the risk of extreme heat, and ultimately help inform a more sustainable and healthier future for the Twin Cities region.  
+The goal of the 2023 update on extreme heat is to do a major addition to the existing body of work. We hope to better integrate the consequences of climate change into city planning and policy decisions, give stakeholders tools to act on mitigating the risk of extreme heat, and ultimately help inform a more sustainable and healthier future for the Twin Cities region.  
 
 # Methods
 
@@ -49,9 +47,11 @@ The goal of this project is to do a major addition to the existing body of work.
 
 Temperature sensing has been a component of the Landsat satellite missions since 1982 by measuring infrared (long) wavelengths which are emitted from the Earth's surface and are a function of surface temperature. Landsat missions 4 and 5 used a thematic mapper instrument to measure infrared reflectance at 120 meter resolution (which underwent a re-sampling process to 30 meter resolution). Landsat 7 used an enhanced thematic mapper plus instrument which increased the spatial resolution to 30 meters. Landsat 7 had an equipment malfunction (scan line corrector) in 2003 which means that not all land area was measured by the satellite. Landsat missions 8 and 9 have thermal infrared sensors (TIRS and TIRS-2, respectively) which detect long wavelengths of light emitted using Quantum Well Infrared Photodetectors (QWIPs). This is a lower-cost and newer alternative to conventional infrared technology used in previous Landsat missions ([NASA](https://landsat.gsfc.nasa.gov/article/thermal-infrared-sensor-tirs/), [USGS](https://www.usgs.gov/faqs/what-are-band-designations-landsat-satellites)). 
 
-While broad patterns in land temperature can be studied back to 1982 using all Landsat satellite data, more detailed patterns in temperature are best explored from with Landsats 8 and 9 (2013 - present), primarily because of improvements in spatial resolution. Both satellites image the Twin Cities region every 16 days. Since the launch of Landsat 9 in the fall of 2021, this means that high quality temperature data is available for our region every 8 days. 
+While broad patterns in land temperature can be studied back to 1982 using all Landsat satellite data, more detailed patterns in temperature are best explored from with Landsats 8 and 9 (2013 - present), primarily because of improvements in spatial resolution. Both satellites image the Twin Cities region every 16 days. Since the launch of Landsat 9 in the fall of 2021, this means that high quality temperature data is available for our region every 8 days. Because the region is not measured every day, this means that extreme heat events don't always line up with when we get satellite data. Additionally, cloudy days (water vapor between the satellite and the ground make the pixels seem much cooler, so we can't rely on data with clouds) or days with heavy smoke cover do not produce usable temperature data.
 
-The entire Twin Cities region is covered by Landsat path 27, row 28-29. The east metro is also on path 26, and the west metro is also on path 28. Because the entire region is not measured every day, this means that extreme heat events don't always line up with when we get satellite data. Additionally, cloudy days (water vapor between the satellite and the ground make the pixels seem much cooler, so we can't rely on data with clouds) or days with heavy smoke cover do not produce usable temperature data.
+The data update 
+
+<!-- The entire Twin Cities region is covered by Landsat path 27, row 28-29. The east metro is also on path 26, and the west metro is also on path 28.  -->
 
 ### Land surface temperature versus air temperature
 
@@ -147,6 +147,9 @@ During the summer months, LandSat land surface temperatures and air temperatures
 #| out.width= "5in",  
 #| out.extra='style="float:right"', 
 #| fig.align='right'
+
+# gee data from HeatHistory.js
+
 load("./data/msp_daily.rda")
 gee <-
 read_csv("./data/GEE_MSP_HeatHistory.csv",
@@ -184,18 +187,19 @@ read_csv("./data/GEE_MSP_HeatHistory.csv",
 
 gee %>%
   filter(doy > yday(ymd("2020-05-01")),
-         doy < yday(ymd("2020-10-01"))) %>%
+         doy < yday(ymd("2020-10-01")),
+         source2 != "LST_L4") %>%
   mutate(type = case_when(air_temp < 85 ~ "mild",
                           # air_temp < 90 ~ "moderate",
                           TRUE ~ "hot")) %>% #filter(source == "LST_L7")
   ggplot(aes(x = air_temp, y = temp, col = source2)) +
-  geom_point()+#aes(col = source)) +
+  geom_point(alpha = .5)+#aes(col = source)) +
   theme_council_open() +
   geom_smooth(method = "lm", fill = NA)+#, col = "black") +
   labs( x = "Airport air temperature",
         y = str_wrap("Airport land surface temperature", 10),
         col = "Landsat",
-        caption = "Summer MSP airport land temperatures correlate with air temperatures.\nLandsat 7 data is only shown before the scan line error failure (pre 2003).") +
+        caption = "Summer (May 1 - Oct 1) MSP airport land temperatures correlate with air temperatures.\nLandsat 7 data is only shown before the scan line error failure (pre 2003).") +
   scale_color_brewer(palette =  "Paired") +
   facet_wrap(~source2)+
   guides(col = "none")
@@ -205,6 +209,29 @@ gee %>%
 # ls5 --> 1984-04-19T13:56:39 - 2011-11-08T14:18:44
 
 
+mod_df <- gee %>%
+  filter(doy > yday(ymd("2020-05-01")),
+         doy < yday(ymd("2020-10-01")),
+         source2 %in% c("LST_L8", "LST_L9")) 
+summary(lm(temp ~ air_temp, data = mod_df))
+mod_b <- 20.1142
+mod_m <- 0.7635
+
+mod_m * (86) + mod_b
+
+  
+  ggplot(aes(x = air_temp, y = temp, col = source2), data = mod_df) +
+  geom_point(alpha = .5)+#aes(col = source)) +
+  theme_council_open() +
+  geom_smooth(method = "lm", fill = NA, col = "black") +
+  labs( x = "Airport air temperature",
+        y = str_wrap("Airport land surface temperature", 10),
+        col = "Landsat",
+        caption = "Summer (May 1 - Oct 1) MSP airport land temperatures correlate with air temperatures.\nLandsat 7 data is only shown before the scan line error failure (pre 2003).") +
+  scale_color_brewer(palette =  "Paired") +
+  # facet_wrap(~source2)+
+  guides(col = "none") +
+    geom_abline(slope = 1, intercept = 0, lty = 2)
 ```
 
 ### Data processing; statistics
@@ -520,13 +547,13 @@ source("./R/heat.R")
 # # this works for running a function on each variable type
 df <- filter(demographics, data == "percents") %>% full_join(heat) %>%
   separate(name, sep = "; ", into = c("type", "other"), remove = F) %>%
-  mutate(source = case_when(type ==  "Race" ~ "Sources: 2020 decennial census;\nJuly 22, 2016 Landsat 8 thermal infared sensor",
-                            TRUE ~ "Sources: 2016-2020 American Community Survey;\nJuly 22, 2016 Landsat 8 thermal infared sensor"),
+  mutate(source = case_when(type ==  "Race" ~ "Sources: 2020 decennial census;\n2022 Landsat and Sentinel-2 spectral reflectance",
+                            TRUE ~ "Sources: 2017-2021 American Community Survey;\n2022 Landsat and Sentinel-2 spectral reflectance"),
          labels = case_when(variable %in% c("income_median", "income_percapita") ~ "dollar",
                             TRUE ~ "percent"),
          height = case_when(type == "Race" ~ 6,
                             TRUE ~ 3)) %>%
-  filter(!is.na(name), variable != "income_below185pov_percent") %>%
+  filter(!is.na(name)) %>% #, variable != "income_below185pov_percent") %>%
   mutate(name = gsub(".*;", "", name),
          name = gsub("%", "", name),
          name = str_to_sentence(name))
@@ -547,13 +574,14 @@ heat_demo_plot <- function(x) {
     scale_x_continuous(
       labels = function(x)
         paste0(x, "°F"),
-      breaks = seq(80, 100, by = 5),
+      breaks = seq(80, 100, by = 10),
       limits = c(80, 105),
       expand = c(.01, .01)
     ) +
     labs(x = "September 2022 land temperature",
-         y = "", title = "Block group percents",
-         caption = str_wrap(paste0(first(x$source)), width = 60)) +
+         y = "", title = "Block group percents"
+         # ,caption = str_wrap(paste0(first(x$source)), width = 50)
+         ) +
     theme(plot.title = element_text(size = 10, face = "bold") )
 }
 
@@ -564,13 +592,13 @@ heat_demo_plot <- function(x) {
 df1 <- filter(demographics, data == "percents") %>% full_join(heat) %>%
   separate(name, sep = "; ", into = c("type", "other"), remove = F) %>%
   mutate(name = str_replace(name, "% ", "total "),
-         source = case_when(type ==  "Race" ~ "Sources: 2020 decennial census;\nJuly 22, 2016 Landsat 8 thermal infared sensor",
-                            TRUE ~ "Sources: 2016-2020 American Community Survey;\nJuly 22, 2016 Landsat 8 thermal infared sensor"),
+         source = case_when(type ==  "Race" ~ "Sources: 2020 decennial census;\n2022 Landsat and Sentinel-2 spectral reflectance",
+                            TRUE ~ "Sources: 2017-2021 American Community Survey;\n2022 Landsat and Sentinel-2 spectral reflectance"),
          labels = case_when(variable %in% c("income_median", "income_percapita") ~ "dollar",
                             TRUE ~ "percent"),
          height = case_when(type == "Race" ~ 6,
                             TRUE ~ 3)) %>%
-  filter(!is.na(name), variable != "income_below185pov_percent") %>%
+  filter(!is.na(name)) %>% #, variable != "income_below185pov_percent") %>%
   mutate(tempbin = case_when(heat2022 < 70 ~ "<70",
                              heat2022 < 75 ~ "70-74",
                              heat2022 < 80 ~ "75-79",
@@ -579,7 +607,7 @@ df1 <- filter(demographics, data == "percents") %>% full_join(heat) %>%
                              TRUE ~ "85+")) %>%
     mutate(tempbin = factor(tempbin, levels=c("85+", "80-84", "75-79", "70-74", "<70"))) %>% 
     arrange(tempbin) %>%
-   group_by(type, variable, tempbin, name) %>%
+   group_by(type, variable, tempbin, name, source) %>%
    summarise(persons = sum(estimate)) %>%
   ungroup() %>% group_by(variable) %>% mutate(totaln = sum(persons)) %>%
   mutate(label = paste0(round(persons / totaln *100, 1), "%"),
@@ -604,8 +632,9 @@ heat_persons_plot <- function(x) {
    scale_y_continuous(labels = scales::percent) +
   geom_text(aes(label = if_else(lab_y <.05, NA_character_, label), y = lab_y),position = "stack", vjust = 1.5,
         size = 3) +
-    labs(y = "", x = "", fill = "Temperature", title = "Regional totals",
-         caption = str_wrap(paste0(first(x$source)), width = 60)) 
+    labs(y = "", x = "", fill = "September 2022\nland temperature", title = "Regional totals", caption = paste0(first(x$source))#str_wrap(paste0(first(x$source)), width = 50)
+         # caption = str_wrap(paste0(first(x$source)), width = 60)
+         ) 
 }
 ```
 
@@ -620,12 +649,15 @@ Neither younger (under age 18) or older (65 or above) age groups who have increa
 #| out.extra='style="float:right"', 
 #| fig.align='right',
 #| fig.asp = 1.3
-(filter(df, type == "Age") %>% 
+age <- (filter(df, type == "Age") %>% 
   heat_demo_plot() +
   scale_y_continuous(labels = scales::percent)) /
 
 filter(df1, type == "Age") %>% 
   heat_persons_plot()
+
+age
+ggsave(age, filename = "/Users/escheh/Desktop/age.png", width = 6, height = 8, device = "png")
 
 ```
 
@@ -644,13 +676,14 @@ Hotter areas have greater percentages of residents who do not speak English at h
 #| fig.align='right',
 #| fig.asp = 1.3
 (filter(df, type == "Communications",
-        name != "Communications; % accessing internet via cellphone only") %>% 
+        variable != "comm_cellonly_percent",
+        variable != "comm_yesinternet_percent") %>% 
   heat_demo_plot() +
   scale_y_continuous(labels = scales::percent)) /
 
 filter(df1, type == "Communications",
-       # name != "Communications; total without internet at home",
-       name != "Communications; total accessing internet via cellphone only") %>% 
+        variable != "comm_cellonly_percent",
+       variable != "comm_yesinternet_percent") %>% 
   heat_persons_plot() +
   scale_y_continuous(labels = scales::percent)
 ```
@@ -666,13 +699,17 @@ People are more likely to be living alone (household size of 1) in areas with gr
 #| out.extra='style="float:right"', 
 #| fig.align='right',
 #| fig.asp = 1.3
-(filter(df, type == "Households") %>% 
+hhsize <- (filter(df, type == "Households") %>% 
   heat_demo_plot() +
   scale_y_continuous(labels = scales::percent))/
 
 filter(df1, type == "Households") %>% 
   heat_persons_plot() +
   scale_y_continuous(labels = scales::percent)
+
+hhsize
+ggsave(hhsize, filename = "/Users/escheh/Desktop/hhsize.png", width = 6, height = 8, device = "png")
+
 ```
 
 ### Income
@@ -686,9 +723,18 @@ There are disparities in exposure to extreme heat with income. Lower income area
 #| out.extra='style="float:right"', 
 #| fig.align='right',
 #| fig.asp = .6
-filter(df, type == "Income") %>% 
+
+income <- ((filter(df, type == "Income"
+                 ,!str_detect(variable, "185pov")
+                 ) %>% 
   heat_demo_plot() +
-  scale_y_continuous(labels = scales::dollar)
+  scale_y_continuous(labels = scales::dollar)) /
+  
+   filter(df1, type == "Income", str_detect(variable, "185pov")) %>% 
+  heat_persons_plot() +
+  scale_y_continuous(labels = scales::percent))
+income
+ggsave(income, filename = "/Users/escheh/Desktop/income.png", width = 6, height = 8, device = "png")
 
 ```
 
@@ -705,7 +751,7 @@ Areas where a greater percent of residents identify as a person of color tend to
 #| out.extra='style="float:right"', 
 #| fig.align='right',
 #| fig.asp = 1.6
-(df %>%
+race <- (df %>%
    filter(type == "Race") %>%
    mutate(name = stringr::str_remove_all(name, "Race; % ")) %>% 
   heat_demo_plot() +
@@ -715,11 +761,14 @@ filter(df1, type == "Race") %>%
   mutate(name = stringr::str_remove_all(name, "Race; total ")) %>%
   heat_persons_plot() +
   scale_y_continuous(labels = scales::percent)
+
+race
+ggsave(race, filename = "/Users/escheh/Desktop/race.png", width = 6, height = 8, device = "png")
 ```
 
-### Tenure
+### Housing tenure
 
-Areas were more residents are renters are disproportionately hotter. This may indicate the need for particular types of mitigation strategies if renters have less agency to make structural (i.e., installing air conditioning units) or environmental (i.e., planting trees or landscaping interventions) changes to reduce heat exposure (Figure \@ref(fig:tenure-fig)). About 45% of the region's total renters live in areas with temperatures over 95 degrees while less than 15% of the region's owners live in similarily hot areas. 
+Areas were more residents are renters are disproportionately hotter. This may indicate the need for particular types of mitigation strategies if renters have less agency to make structural (i.e., installing air conditioning units) or environmental (i.e., planting trees or landscaping interventions) changes to reduce heat exposure (Figure \@ref(fig:tenure-fig)). About 30% of the region's total renters live in areas with temperatures in the hottest quintile while only 6% of the region's owners live in similarly hot areas. 
 
 <!-- Interestingly, the median utility cost for renters is lower in areas which are hotter. There may be some confounding factors going on however. For instance, utility costs may be low if some options for heating or cooling are not available (utility cost cannot be parsed by heating or cooling costs), and utility cost may be a function of preferences rather than energy efficiency.  -->
 
@@ -732,7 +781,7 @@ Areas were more residents are renters are disproportionately hotter. This may in
 #| fig.align='right',
 #| fig.asp = 1.3
 # knitr::include_graphics("./figs/Tenure.png")
-(filter(df, type == "Tenure", 
+tenure <- (filter(df, type == "Tenure", 
        !str_detect(name, "utility")) %>% 
   heat_demo_plot() +
     facet_wrap( ~ name,
@@ -744,6 +793,9 @@ filter(df1, type == "Tenure",
        !str_detect(name, "utility")) %>% 
   heat_persons_plot() +
   scale_y_continuous(labels = scales::percent)
+
+ggsave(tenure, filename = "/Users/escheh/Desktop/tenure.png", width = 6, height = 8, device = "png")
+
 ```
 
 
@@ -901,6 +953,21 @@ What are the grassroots efforts related to heat? Could include:
 - Update MN Geospatial commons data
 - Would communications folks want to be engaged?
 - Should we bring drought into the picture here (aka temperature + precipitation)? 
+
+# Scenario planning
+
+Here we ask the question about 
+
+```{r}
+#from gee
+new_sfd <- 90.54840337800199
+new_mf <- 91
+new_commercial <- 99
+new_industrial <- 100
+
+```
+
+
 
 <!-- # Game Plan -->
 

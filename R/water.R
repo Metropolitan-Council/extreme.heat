@@ -3,9 +3,11 @@ library(sf)
 library(osmdata)
 `%not_in%` <- Negate(`%in%`)
 
-metc <- councilR::fetch_county_geo(core = T) %>%
-  group_by(STATEFP) %>%
-  summarise()
+# metc <- councilR::fetch_county_geo(core = T) %>%
+#   group_by(STATEFP) %>%
+#   summarise()
+
+
 #######
 # pull osm data
 #######
@@ -15,10 +17,10 @@ packageVersion("osmdata")
 curl::curl_version()
 
 assign("has_internet_via_proxy", TRUE, environment(curl::has_internet))
-osm_data_natural <- purrr::map(.x = c(1:nrow(metc)), .f = function(x) {
+osm_data_natural <- purrr::map(.x = c(1:nrow(summarise(metc_plus))), .f = function(x) {
   Sys.sleep(10)
 
-  bbox <- metc %>%
+  bbox <- summarise(metc_plus) %>%
     st_transform(4326) %>%
     st_bbox()
   
@@ -28,10 +30,10 @@ osm_data_natural <- purrr::map(.x = c(1:nrow(metc)), .f = function(x) {
   natural
 })
 
-osm_data_manmade <- purrr::map(.x = c(1:nrow(metc)), .f = function(x) {
+osm_data_manmade <- purrr::map(.x = c(1:nrow(summarise(metc_plus))), .f = function(x) {
   Sys.sleep(10)
   
-  bbox <- metc %>%
+  bbox <- summarise(metc_plus) %>%
     st_transform(4326) %>%
     st_bbox()
   
