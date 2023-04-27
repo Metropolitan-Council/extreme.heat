@@ -102,3 +102,31 @@ mapview::mapview(list(
   ,metc_plus), col.regions = list("green", "blue"))
 
 
+
+write_sf_shp_zip <- function(.name, .shpfile, overwrite = FALSE) {
+  
+  zipfile <- paste0(.name, ".zip")
+  
+  if (file.exists(zipfile) && !overwrite) {
+    stop(paste0("File already exists: ", zipfile,
+                "\nUse 'overwrite = TRUE' to overwrite the existing file."))
+  }
+  
+  tmp_zip <- basename(zipfile)
+  shp_name <- paste0(tools::file_path_sans_ext(tmp_zip), ".shp")
+  
+  ## Temporary directory to write .shp file
+  tmp <- tempfile()
+  dir.create(tmp)
+  on.exit(unlink(tmp, recursive = TRUE, force = TRUE))
+  
+  sf::write_sf(.shpfile, file.path(tmp, shp_name), delete_layer = TRUE, layer_options="ENCODING=UTF-8")
+  withr::with_dir(tmp, zip(tmp_zip, list.files()))
+  
+  file.copy(file.path(tmp, tmp_zip), zipfile, overwrite = overwrite)
+}
+
+
+write_sf_shp_zip("fullctu_metc", (metc_plus %>% summarise()), overwrite = TRUE)
+
+
