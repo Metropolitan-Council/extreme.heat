@@ -39,3 +39,7 @@ vignettes/*.pdf
 .Renviron
 .DS_Store
 data-raw/shp_plan_regional_parcels.zip
+data-raw/ramsey/*
+data-raw/shp_plan_regional_parcels/*
+data-raw/hydrography/*
+sliders/
