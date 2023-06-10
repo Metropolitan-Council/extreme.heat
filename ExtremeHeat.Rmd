@@ -582,7 +582,7 @@ df <- filter(demographics, data == "percents") %>% full_join(heat) %>%
 
 heat_demo_plot <- function(x) {
   x %>%
-    ggplot(aes(x = estimate, y = heat2022)) +
+    ggplot(aes(y = estimate, x = heat2022)) +
     geom_point(alpha = .1,
                pch = 21,
                size = .5) +
@@ -591,16 +591,16 @@ heat_demo_plot <- function(x) {
                 labeller = label_wrap_gen((width = 25))) +
     theme_council_open() +
     geom_smooth(fill = NA, color = councilR::colors$councilBlue) +
-    scale_y_continuous(
+    scale_x_continuous(
       labels = function(x)
         paste0(x, "°F"),
-      breaks = seq(80, 100, by = 10),
-      limits = c(80, 105),
+      # breaks = seq(80, 100, by = 10),
+      # limits = c(80, 105),
       expand = c(.01, .01)
     ) +
     labs(x = "September 2022 land temperature",
          y = "", title = "Block group percents"
-         # ,caption = str_wrap(paste0(first(x$source)), width = 50)
+         ,caption = str_wrap(paste0(first(x$source)), width = 50)
          ) +
     theme(plot.title = element_text(size = 10, face = "bold") )
 }
@@ -609,6 +609,23 @@ heat_demo_plot <- function(x) {
 
 
 ### persons
+# coolest <- quantile(heat$heat2022, .2, na.rm = T)
+# cool <- quantile(heat$heat2022, .4, na.rm = T)
+# avgheat <- quantile(heat$heat2022, .6, na.rm = T)
+# hot <- quantile(heat$heat2022, .8, na.rm = T)
+
+coolest <- 93
+cool <- 94
+avgheat <- 95
+hot <- 99
+
+coolest_lab <- paste0("<", round(coolest, 0))
+cool_lab <- paste0(round(coolest, 0) + 0, "-", round(cool, 0))
+avgheat_lab <- paste0(round(cool, 0) + 0, "-", round(avgheat, 0))
+hot_lab <- paste0(round(avgheat, 0) + 0, "-", round(hot, 0))
+hottest_lab <- paste0(round(hot, 0) + 0, "+")
+
+
 df1 <- filter(demographics, data == "percents") %>% full_join(heat) %>%
   separate(name, sep = "; ", into = c("type", "other"), remove = F) %>%
   mutate(name = str_replace(name, "% ", "total "),
@@ -619,24 +636,13 @@ df1 <- filter(demographics, data == "percents") %>% full_join(heat) %>%
          height = case_when(type == "Race" ~ 6,
                             TRUE ~ 3)) %>%
   filter(!is.na(name)) %>% #, variable != "income_below185pov_percent") %>%
-  mutate(tempbin = case_when(heat2022 < quantile(heat$heat2022, .2, na.rm = T) ~ 
-                               paste0("<", round(quantile(heat$heat2022, .2, na.rm = T), 0)),
-                             heat2022 < quantile(heat$heat2022, .4, na.rm = T) ~ 
-                               paste0(round(quantile(heat$heat2022, .2, na.rm = T), 0) + 1, 
-                                      "-", 
-                                      round(quantile(heat$heat2022, .4, na.rm = T), 0)),
-                             heat2022 < quantile(heat$heat2022, .6, na.rm = T) ~ 
-                               paste0(round(quantile(heat$heat2022, .4, na.rm = T), 0) + 1, 
-                                      "-", 
-                                      round(quantile(heat$heat2022, .6, na.rm = T), 0)),
-                             heat2022 < quantile(heat$heat2022, .8, na.rm = T) ~ 
-                               paste0(round(quantile(heat$heat2022, .6, na.rm = T), 0) + 1, 
-                                      "-", 
-                                      round(quantile(heat$heat2022, .8, na.rm = T), 0)),
-                             TRUE ~ 
-                               paste0(round(quantile(heat$heat2022, .8, na.rm = T), 0) + 1, 
-                                      "+"))) %>%
-    # mutate(tempbin = factor(tempbin, levels=c("85+", "80-84", "75-79", "70-74", "<70"))) %>% 
+  mutate(tempbin = case_when(heat2022 < coolest ~ coolest_lab,
+                             heat2022 < cool ~ cool_lab,
+                             heat2022 <  avgheat ~ avgheat_lab,
+                             heat2022 < hot ~ hot_lab,
+                             TRUE ~ hottest_lab)) %>%
+    mutate(tempbin = factor(tempbin, levels=c(hottest_lab, hot_lab, avgheat_lab, cool_lab, coolest_lab))) %>%
+    # mutate(tempbin = factor(tempbin, levels=c("85+", "80-84", "75-79", "70-74", "<70"))) %>%
     arrange(tempbin) %>%
    group_by(type, variable, tempbin, name, source) %>%
    summarise(persons = sum(estimate)) %>%
@@ -682,7 +688,7 @@ Neither younger (under age 18) or older (65 or above) age groups who have increa
 #| fig.asp = 1.3
 age <- (filter(df, type == "Age") %>% 
   heat_demo_plot() +
-  scale_y_continuous())/#labels = scales::percent)) /
+  scale_y_continuous(labels = scales::percent)) /
 
 filter(df1, type == "Age") %>% 
   heat_persons_plot()
@@ -756,12 +762,12 @@ There are disparities in exposure to extreme heat with income. Lower income area
 #| fig.asp = .6
 
 income <- ((filter(df, type == "Income"
-                 ,!str_detect(variable, "100pov", "185pov")
+                 ,!str_detect(variable, "100pov|185pov")
                  ) %>% 
   heat_demo_plot() +
-  scale_x_continuous(labels = scales::dollar)) /
+  scale_y_continuous(labels = scales::dollar)) /
   
-   filter(df1, type == "Income", str_detect(variable, "180pov")) %>% 
+   filter(df1, type == "Income", str_detect(variable, "185pov|100pov")) %>% 
   heat_persons_plot() +
   scale_y_continuous(labels = scales::percent))
 income
@@ -795,7 +801,7 @@ Areas where a greater percent of residents identify as a person of color tend to
 #| fig.align='right',
 #| fig.asp = 1.6
 race <- (df %>%
-   filter(type == "Race") %>%
+   filter(type == "Race", variable != "pbipoc") %>%
    mutate(name = stringr::str_remove_all(name, "Race; % ")) %>% 
   heat_demo_plot() +
   scale_y_continuous(labels = scales::percent))/
