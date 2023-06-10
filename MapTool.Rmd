@@ -1,0 +1,87 @@
+---
+title: "Map Tool"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: '4'
+    df_print: paged
+always_allow_html: yes
+urlcolor: blue
+---
+
+```{r include = F}
+library(tidyverse)
+library(leaflet)
+library(sf)
+
+`%not_in%` <- Negate(`%in%`)
+
+```
+
+# Making a map tool
+
+The goal is to build export a map of 2022 temperature as an html file. It looks like html maps can be embedded on Council websites (e.x. [TSPE's "stewardship" accordion](https://metrocouncil.org/Transportation/Performance/System-Measures/Transportation-System-Performance-Evaluation.aspx))
+
+
+```{r}
+map_centroid <- councilR::fetch_county_geo() %>%
+  st_union() %>%
+  st_centroid()
+
+raster_tile_location <- "https://github.com/Metropolitan-Council/extreme.heat/tree/main/RasterTiles_Sept2022LST/{z}/{x}/{y}"
+
+# raster_tile_location <- "https://metropolitan-council.github.io/treeraster-2021/GrowingShadeTealTrees_2021_toCloud/{z}/{x}/{y}"
+
+leaflet(options = leafletOptions(
+      minZoom = 8, maxZoom = 15,
+      attributionControl = FALSE
+    )) %>%
+      setView(
+        lat = st_coordinates(map_centroid)[2],
+        lng = st_coordinates(map_centroid)[1],
+        zoom = 10
+      ) %>%
+  leaflet.extras::addFullscreenControl(position = "topleft", pseudoFullscreen = TRUE) %>%
+  addMapPane(name = "Map", zIndex = 80) %>%
+  addMapPane(name = "Aerial Imagery", zIndex = 100) %>% 
+  addProviderTiles("Esri.WorldGrayCanvas",
+        options = providerTileOptions(maxZoom = 17), 
+        group = "Map"
+      ) %>%
+  addProviderTiles(
+        provider = providers$Esri.WorldImagery,
+        group = "Satellite",
+        options = pathOptions(pane = "Aerial Imagery")
+      ) %>%
+  addLayersControl(
+        position = "bottomright",
+        baseGroups = c(
+          "Map",
+          "Aerial Imagery"
+        ),
+        overlayGroups = c(
+          "Trees"
+        ),
+        options = layersControlOptions(collapsed = T)
+      ) %>%
+  addMapPane("Trees", zIndex = 230) %>%
+  addTiles(raster_tile_location,
+             attribution = NULL,
+        options = c(
+          tileOptions(opacity = .6),
+          pathOptions(pane = "Trees")
+        ),
+        group = "Trees"
+      )
+
+
+
+```
+
+
+
+
+
+
+
