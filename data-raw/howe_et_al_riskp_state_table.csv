@@ -1,0 +1,52 @@
+StateFP,riskp_est,riskp_est_diff,PPSTATEN,State_name,reg4,reg9
+1,41.56346798,1.910146552,AL,Alabama,South,East-South Central
+2,34.81231432,-4.841007101,AK,Alaska,West,Pacific
+4,43.02931945,3.375998027,AZ,Arizona,West,Mountain
+5,41.2564519,1.603130471,AR,Arkansas,South,West-South Central
+6,43.47585625,3.822534822,CA,California,West,Pacific
+8,33.92241934,-5.730902088,CO,Colorado,West,Mountain
+9,36.39248577,-3.260835653,CT,Connecticut,Northeast,New England
+10,40.3291969,0.675875472,DE,Delaware,Northeast,South Atlantic
+11,41.4653729,1.812051474,DC,District of Columbia,South,South Atlantic
+12,42.80685207,3.153530643,FL,Florida,South,South Atlantic
+13,41.32821105,1.674889623,GA,Georgia,South,South Atlantic
+15,44.64304713,4.989725703,HI,Hawaii,West,Pacific
+16,34.45140064,-5.201920786,ID,Idaho,West,Mountain
+17,37.67552856,-1.977792865,IL,Illinois,Midwest,East-North Central
+18,36.37333557,-3.279985854,IN,Indiana,Midwest,East-North Central
+19,34.38101393,-5.2723075,IA,Iowa,Midwest,West-North Central
+20,37.1441364,-2.509185027,KS,Kansas,Midwest,West-North Central
+21,39.03009868,-0.623222747,KY,Kentucky,South,East-South Central
+22,43.72626865,4.07294723,LA,Louisiana,South,West-South Central
+23,33.64063469,-6.012686737,ME,Maine,Northeast,New England
+24,39.33549054,-0.317830883,MD,Maryland,South,South Atlantic
+25,34.32949558,-5.323825849,MA,Massachusetts,Northeast,New England
+26,34.96437712,-4.688944302,MI,Michigan,Midwest,East-North Central
+27,31.95984231,-7.693479111,MN,Minnesota,Midwest,West-North Central
+28,42.37805958,2.724738151,MS,Mississippi,South,East-South Central
+29,38.43486884,-1.218452581,MO,Missouri,Midwest,West-North Central
+30,32.1613222,-7.491999226,MT,Montana,West,Mountain
+31,34.67405067,-4.979270757,NE,Nebraska,Midwest,West-North Central
+32,44.00738793,4.3540665,NV,Nevada,West,Mountain
+33,32.61180754,-7.041513883,NH,New Hampshire,Northeast,New England
+34,38.89181281,-0.76150862,NJ,New Jersey,Northeast,Mid-Atlantic
+35,39.56655634,-0.086765087,NM,New Mexico,West,Mountain
+36,40.15341716,0.50009573,NY,New York,Northeast,Mid-Atlantic
+37,39.60270193,-0.050619495,NC,North Carolina,South,South Atlantic
+38,31.46454761,-8.188773813,ND,North Dakota,Midwest,West-North Central
+39,35.68433694,-3.968984482,OH,Ohio,Midwest,East-North Central
+40,42.53002951,2.87670808,OK,Oklahoma,South,West-South Central
+41,38.06560186,-1.587719566,OR,Oregon,West,Pacific
+42,37.85267393,-1.800647493,PA,Pennsylvania,Northeast,Mid-Atlantic
+44,38.0843418,-1.568979621,RI,Rhode Island,Northeast,New England
+45,41.05683385,1.403512429,SC,South Carolina,South,South Atlantic
+46,33.62594371,-6.02737772,SD,South Dakota,Midwest,West-North Central
+47,39.10894915,-0.544372272,TN,Tennessee,South,East-South Central
+48,44.63891489,4.985593469,TX,Texas,South,West-South Central
+49,37.32293294,-2.330388483,UT,Utah,West,Mountain
+50,32.7763719,-6.87694953,VT,Vermont,Northeast,New England
+51,39.57074399,-0.082577431,VA,Virginia,South,South Atlantic
+53,37.74994108,-1.903380349,WA,Washington,West,Pacific
+54,37.0142163,-2.639105129,WV,West Virginia,South,South Atlantic
+55,33.51290587,-6.140415555,WI,Wisconsin,Midwest,East-North Central
+56,32.29303956,-7.360281863,WY,Wyoming,West,Mountain

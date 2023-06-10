@@ -27,19 +27,39 @@ knitr::opts_chunk$set(
 
 ```
 
-# Action items
-
-1) Do we want to get on a meeting schedule? Joel says yes, just pick a date.
-  - COW meeting: big question is "with the Council's convening ability, could we pull together some shared definitions, consider developing a stakeholder group to guide this work? 
-  - LUAC meeting: big question is "what tools/data would help you commit to and act on mitigating extreme heat? Thinking about resource allocations, planning decisions, etc.
-  - Council Climate Workgroup: they are focusing on Climate Action Plan right now, may not be best fit
-2) Move away from thinking about the hottest land temperature going up, and instead think about areas where heat risk has changed over time.
-
 # Introduction
 
 The Metropolitan Council provides local planning assistance for communities across the Twin Cities region. As part of this assistance, the Council provides an “Extreme Heat Mapping Tool” for the Twin Cities. This tool shows the land surface temperature during the historic July 2016 heat wave and was created from remote-sensing data (Landsat 8). This dataset has proved particularly valuable as communities evaluate and plan for climate change adaptation techniques, future development and land use planning, and also undertake immediate interventions to reduce heat-related health consequences. 
 
 The goal of the 2023 update on extreme heat is to do a major addition to the existing body of work. We hope to better integrate the consequences of climate change into city planning and policy decisions, give stakeholders tools to act on mitigating the risk of extreme heat, and ultimately help inform a more sustainable and healthier future for the Twin Cities region.  
+
+# Stories
+
+```{r}
+tibble(month = c("May", "June", "July", "August", "September"), 
+       deaths = c(2, 15, 33, 23, 1)) %>%
+  mutate(month = forcats::fct_relevel(
+    month,
+    "May", "June", "July", "August", "September")) %>%
+  ggplot(aes(x = month, y = deaths)) +
+  geom_col(fill = colors$councilBlue) +
+  theme_council_open() +
+  theme(axis.title.x = element_blank(), 
+        axis.title.y = element_blank(),
+        axis.text = element_text(size = 12),
+        plot.caption = element_text(size = 8)) +
+  labs(title = "Number of heat-related deaths* in Minnesota",
+       caption = ("*Deaths due explicitly to heat only, for years 2000-2022.
+       Source: Minnesota Department of Health.")) + 
+  geom_text(aes(label = deaths), hjust =0, vjust = -2, size = 4) +
+  scale_y_continuous(expand = expansion(mult = c(0.0, 0.2)))
+  
+  ggsave(file.path(here::here(), "figs/mn-heat-deaths.png"),
+         height = 4, width = 5, units = "in")
+
+sum(2, 15, 33, 23, 1)
+```
+
 
 # Methods
 
@@ -562,7 +582,7 @@ df <- filter(demographics, data == "percents") %>% full_join(heat) %>%
 
 heat_demo_plot <- function(x) {
   x %>%
-    ggplot(aes(y = estimate, x = heat2022)) +
+    ggplot(aes(x = estimate, y = heat2022)) +
     geom_point(alpha = .1,
                pch = 21,
                size = .5) +
@@ -571,7 +591,7 @@ heat_demo_plot <- function(x) {
                 labeller = label_wrap_gen((width = 25))) +
     theme_council_open() +
     geom_smooth(fill = NA, color = councilR::colors$councilBlue) +
-    scale_x_continuous(
+    scale_y_continuous(
       labels = function(x)
         paste0(x, "°F"),
       breaks = seq(80, 100, by = 10),
@@ -599,13 +619,24 @@ df1 <- filter(demographics, data == "percents") %>% full_join(heat) %>%
          height = case_when(type == "Race" ~ 6,
                             TRUE ~ 3)) %>%
   filter(!is.na(name)) %>% #, variable != "income_below185pov_percent") %>%
-  mutate(tempbin = case_when(heat2022 < 70 ~ "<70",
-                             heat2022 < 75 ~ "70-74",
-                             heat2022 < 80 ~ "75-79",
-                             heat2022 < 85 ~ "80-84",
-                             # heat2022 < 105 ~ "<105",
-                             TRUE ~ "85+")) %>%
-    mutate(tempbin = factor(tempbin, levels=c("85+", "80-84", "75-79", "70-74", "<70"))) %>% 
+  mutate(tempbin = case_when(heat2022 < quantile(heat$heat2022, .2, na.rm = T) ~ 
+                               paste0("<", round(quantile(heat$heat2022, .2, na.rm = T), 0)),
+                             heat2022 < quantile(heat$heat2022, .4, na.rm = T) ~ 
+                               paste0(round(quantile(heat$heat2022, .2, na.rm = T), 0) + 1, 
+                                      "-", 
+                                      round(quantile(heat$heat2022, .4, na.rm = T), 0)),
+                             heat2022 < quantile(heat$heat2022, .6, na.rm = T) ~ 
+                               paste0(round(quantile(heat$heat2022, .4, na.rm = T), 0) + 1, 
+                                      "-", 
+                                      round(quantile(heat$heat2022, .6, na.rm = T), 0)),
+                             heat2022 < quantile(heat$heat2022, .8, na.rm = T) ~ 
+                               paste0(round(quantile(heat$heat2022, .6, na.rm = T), 0) + 1, 
+                                      "-", 
+                                      round(quantile(heat$heat2022, .8, na.rm = T), 0)),
+                             TRUE ~ 
+                               paste0(round(quantile(heat$heat2022, .8, na.rm = T), 0) + 1, 
+                                      "+"))) %>%
+    # mutate(tempbin = factor(tempbin, levels=c("85+", "80-84", "75-79", "70-74", "<70"))) %>% 
     arrange(tempbin) %>%
    group_by(type, variable, tempbin, name, source) %>%
    summarise(persons = sum(estimate)) %>%
@@ -651,7 +682,7 @@ Neither younger (under age 18) or older (65 or above) age groups who have increa
 #| fig.asp = 1.3
 age <- (filter(df, type == "Age") %>% 
   heat_demo_plot() +
-  scale_y_continuous(labels = scales::percent)) /
+  scale_y_continuous())/#labels = scales::percent)) /
 
 filter(df1, type == "Age") %>% 
   heat_persons_plot()
@@ -725,16 +756,28 @@ There are disparities in exposure to extreme heat with income. Lower income area
 #| fig.asp = .6
 
 income <- ((filter(df, type == "Income"
-                 ,!str_detect(variable, "185pov")
+                 ,!str_detect(variable, "100pov", "185pov")
                  ) %>% 
   heat_demo_plot() +
-  scale_y_continuous(labels = scales::dollar)) /
+  scale_x_continuous(labels = scales::dollar)) /
   
-   filter(df1, type == "Income", str_detect(variable, "185pov")) %>% 
+   filter(df1, type == "Income", str_detect(variable, "180pov")) %>% 
   heat_persons_plot() +
   scale_y_continuous(labels = scales::percent))
 income
 ggsave(income, filename = "/Users/escheh/Desktop/income.png", width = 6, height = 8, device = "png")
+
+
+
+(filter(df, type == "Income"
+                 ,!str_detect(variable, "185pov|100pov|percapita")
+                 ) %>% 
+  heat_demo_plot() +
+  scale_x_continuous(labels = scales::dollar))
+
+# filter(df1, type == "Income", !str_detect(variable, "180pov")) %>% 
+#   heat_persons_plot() +
+#   scale_y_continuous(labels = scales::percent)
 
 ```
 

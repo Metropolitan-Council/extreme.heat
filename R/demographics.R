@@ -67,7 +67,9 @@ if (process_demos == TRUE) {
                                      .name = "age_65up"))
    
    acs_income <- fxn_sum_acs(.vars = c(paste0("C17002_00", c(2:6))),
-                  .name = "income_below185pov")
+                  .name = "income_below185pov") %>%
+     bind_rows(fxn_sum_acs(.vars = c(paste0("C17002_00", c(2:3))),
+                           .name = "income_below100pov"))
   
   acsapi_sums <- bind_rows(acs_age, acs_income)
   
@@ -166,7 +168,11 @@ if (process_demos == TRUE) {
       
       estimate.income_below185pov_percent = estimate.income_below185pov / estimate.income_povstatus,
       moe.income_below185pov_percent = moe_ratio(num = estimate.income_below185pov, denom = estimate.income_povstatus,
-                                       moe_num = moe.income_below185pov, moe_denom = moe.income_povstatus)
+                                       moe_num = moe.income_below185pov, moe_denom = moe.income_povstatus),
+      
+      estimate.income_below100pov_percent = estimate.income_below100pov / estimate.income_povstatus,
+      moe.income_below100pov_percent = moe_ratio(num = estimate.income_below100pov, denom = estimate.income_povstatus,
+                                                 moe_num = moe.income_below100pov, moe_denom = moe.income_povstatus)
     ) %>% 
     pivot_longer(names_to = "variable", values_to = "values",-bg20) %>%
     separate(variable,
@@ -247,6 +253,7 @@ if (process_demos == TRUE) {
       pamindnh = amindnh / poptotal,
       pothmultnh = (multracenh + othernh) / poptotal,
       pbipoc = 1 - (whitenh / poptotal),
+      pwhite = whitenh / poptotal,
       
       poptot_mc = poptotal,
       hutot_mc = hhtotal
@@ -264,7 +271,8 @@ if (process_demos == TRUE) {
       phisppop = hisppop,
       pamindnh = amindnh ,
       pothmultnh = (multracenh + othernh),
-      pbipoc = poptotal - (whitenh)
+      pbipoc = poptotal - (whitenh),
+      pwhite = whitenh
       
     )  %>%
     pivot_longer(names_to = "variable", values_to = "estimate",-bg20) 
@@ -286,6 +294,7 @@ if (process_demos == TRUE) {
     "tenure_utilitycost", "Tenure; median renter utility costs as a percent of contract rent",
     "income_percapita", "Income; per capita",
     "income_below185pov_percent", "Income; % under 185% poverty rate",
+    "income_below100pov_percent", "Income; % under 100% poverty rate",
     "comm_cellonly_percent", "Communications; % accessing internet via cellphone only",
     "comm_nointernet_percent", "Communications; % without internet at home",
     "comm_yesinternet_percent", "Communications; % with internet",
@@ -296,7 +305,8 @@ if (process_demos == TRUE) {
     "pbipoc", "Race; % Person of Color",
     "pblacknh", "Race; % Black",
     "phisppop", "Race; % Hispanic",
-    "pothmultnh", "Race; % Other or Multiracial"
+    "pothmultnh", "Race; % Other or Multiracial",
+    "pwhite", "Race; % white"
   )
   
   demographics <- (acsapi_percents %>% add_column(data = "percents")) %>%
