@@ -39,7 +39,7 @@ raster_tile_location <- "https://metropolitan-council.github.io/TempRasterTiles_
 # raster_tile_location <- "https://metropolitan-council.github.io/treeraster-2021/GrowingShadeTealTrees_2021_toCloud/{z}/{x}/{y}"
 
 heat_tool <- leaflet(options = leafletOptions(
-      minZoom = 8, maxZoom = 11,
+      minZoom = 8, maxZoom = 17,
       attributionControl = FALSE
     )) %>%
       setView(
@@ -50,7 +50,7 @@ heat_tool <- leaflet(options = leafletOptions(
   leaflet.extras::addFullscreenControl(position = "topleft", pseudoFullscreen = TRUE) %>%
   addMapPane(name = "Map", zIndex = 80) %>%
   addMapPane(name = "Aerial Imagery", zIndex = 100) %>% 
-  addProviderTiles("Esri.WorldGrayCanvas",
+  addProviderTiles("CartoDB.Positron", #Esri.WorldGrayCanvas",
         options = providerTileOptions(maxZoom = 17), 
         group = "Map"
       ) %>%
