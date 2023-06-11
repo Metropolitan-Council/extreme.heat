@@ -23,18 +23,23 @@ library(sf)
 
 The goal is to build export a map of 2022 temperature as an html file. It looks like html maps can be embedded on Council websites (e.x. [TSPE's "stewardship" accordion](https://metrocouncil.org/Transportation/Performance/System-Measures/Transportation-System-Performance-Evaluation.aspx))
 
+The html embed code will be something like this
+`</div><div class="wysiwyg" >
+  <span class="links"><a href="/METC/media/TSPE/01-01_efficient_good_repair.html#fig-map-pavement">Figure 1.10</a></span> Map of land surface temperature, September 2022<br />
+<iframe description="Map of land surface temperature, September 2022" height="450px" src="/METC/media/TSPE/fig_html/figure_1.10-pavement-condition.html" width="100%"></iframe>
+`
 
 ```{r}
 map_centroid <- councilR::fetch_county_geo() %>%
   st_union() %>%
   st_centroid()
 
-raster_tile_location <- "https://github.com/Metropolitan-Council/extreme.heat/tree/main/RasterTiles_Sept2022LST/{z}/{x}/{y}"
+raster_tile_location <- "https://metropolitan-council.github.io/TempRasterTiles_Sept2022LST/RasterTiles_Sept2022LST/{z}/{x}/{y}"
 
 # raster_tile_location <- "https://metropolitan-council.github.io/treeraster-2021/GrowingShadeTealTrees_2021_toCloud/{z}/{x}/{y}"
 
-leaflet(options = leafletOptions(
-      minZoom = 8, maxZoom = 15,
+heat_tool <- leaflet(options = leafletOptions(
+      minZoom = 8, maxZoom = 11,
       attributionControl = FALSE
     )) %>%
       setView(
@@ -61,21 +66,28 @@ leaflet(options = leafletOptions(
           "Aerial Imagery"
         ),
         overlayGroups = c(
-          "Trees"
+          "Land surface temperature, Sept. 2022"
         ),
         options = layersControlOptions(collapsed = T)
       ) %>%
-  addMapPane("Trees", zIndex = 230) %>%
+  addMapPane("LST", zIndex = 230) %>%
   addTiles(raster_tile_location,
              attribution = NULL,
         options = c(
-          tileOptions(opacity = .6),
-          pathOptions(pane = "Trees")
+          tileOptions(opacity = 1),
+          pathOptions(pane = "LST")
         ),
-        group = "Trees"
+        group = "Land surface temperature, Sept. 2022"
       )
+heat_tool
+
+# Dimention of the map
+heat_tool$width <- 874
+heat_tool$height <- 450
 
 
+# Export as HTML file
+htmlwidgets::saveWidget(heat_tool, 'Sept2022LST.html', selfcontained = FALSE)
 
 ```
 
