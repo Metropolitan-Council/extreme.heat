@@ -38,6 +38,10 @@ raster_tile_location <- "https://metropolitan-council.github.io/TempRasterTiles_
 
 # raster_tile_location <- "https://metropolitan-council.github.io/treeraster-2021/GrowingShadeTealTrees_2021_toCloud/{z}/{x}/{y}"
 
+color_bins <- c(83, 108)
+color_pal    <- colorBin("cyan", "red") 
+
+
 heat_tool <- leaflet(options = leafletOptions(
       minZoom = 8, maxZoom = 17,
       attributionControl = FALSE
@@ -45,7 +49,7 @@ heat_tool <- leaflet(options = leafletOptions(
       setView(
         lat = st_coordinates(map_centroid)[2],
         lng = st_coordinates(map_centroid)[1],
-        zoom = 10
+        zoom = 9
       ) %>%
   leaflet.extras::addFullscreenControl(position = "topleft", pseudoFullscreen = TRUE) %>%
   addMapPane(name = "Map", zIndex = 80) %>%
@@ -72,22 +76,31 @@ heat_tool <- leaflet(options = leafletOptions(
       ) %>%
   addMapPane("LST", zIndex = 230) %>%
   addTiles(raster_tile_location,
-             attribution = NULL,
+             attribution = "",
         options = c(
           tileOptions(opacity = 1),
           pathOptions(pane = "LST")
         ),
         group = "Land surface temperature, Sept. 2022"
-      )
+      ) %>%
+  addLegend("topright", 
+            pal = colorNumeric(palette = c("cyan", "green", "yellow", "red"),
+                               domain = c(83, 108)), 
+            values = c(83,91,99,108),
+    title = "September 2022<br>Land surface temperature",
+    labFormat = labelFormat(suffix = " °F"),
+    opacity = 1
+  )
 heat_tool
 
-# Dimention of the map
+# Dimension of the map
 heat_tool$width <- 874
 heat_tool$height <- 450
 
 
 # Export as HTML file
-htmlwidgets::saveWidget(heat_tool, 'Sept2022LST.html', selfcontained = FALSE)
+htmlwidgets::saveWidget(heat_tool, 'Sept2022LST.html', selfcontained = TRUE)
+
 
 ```
 

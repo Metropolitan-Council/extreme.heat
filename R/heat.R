@@ -8,7 +8,7 @@ if (process_heat == TRUE){
   # transmute(bg20 = bg20,
   #           heat2016 = avg_temp)
  
-  heat <- read_csv("/Users/escheh/Downloads/ExtremeHeat2022_blockgroups2020.csv",
+  heat <- read_csv(file.path(here::here(), "data-raw/ExtremeHeat2022_blockgroups2020.csv"),
                               col_select = c(GEOID, mean_LST),
                               col_types = c("GEOID" = "c")) %>%
     mutate(mean_LST = stringr::str_remove_all(mean_LST, "\\{LST=|\\}|null"),

@@ -60,6 +60,51 @@ tibble(month = c("May", "June", "July", "August", "September"),
 sum(2, 15, 33, 23, 1)
 ```
 
+# Community specific temperatures
+
+```{r}
+ctus <- read_csv(file.path(here::here(), "data-raw/ExtremeHeat2022_ctus_max.csv"),
+                 col_select = c(CTU_NAME, LST = max_LST)) %>%
+  add_column(type = "max_LST") %>%
+  bind_rows(read_csv(file.path(here::here(), "data-raw/ExtremeHeat2022_ctus_min.csv"),
+                 col_select = c(CTU_NAME, LST = min_LST)) %>%
+              add_column(type = "min_LST")) %>%
+  bind_rows(read_csv(file.path(here::here(), "data-raw/ExtremeHeat2022_ctus_mean.csv"),
+                 col_select = c(CTU_NAME, LST = mean_LST)) %>%
+              add_column(type = "mean_LST")) %>%
+    mutate(LST = stringr::str_remove_all(LST, "\\{LST=|\\}|null"),
+           LST = as.numeric(LST)) %>%
+  pivot_wider(names_from = type, values_from = LST) %>%
+  arrange(CTU_NAME) %>%
+  select(CTU_NAME, min_LST, mean_LST, max_LST)
+
+write_csv(ctus, file = file.path(here::here(), "figs/ctu_average.csv"))
+
+
+ctus %>%
+  arrange(mean_LST) %>%
+  mutate(CTU_NAME = fct_reorder(CTU_NAME, mean_LST)) %>%
+  mutate(color = c(
+      colorRampPalette(RColorBrewer::brewer.pal(9, "Blues")[8:3])(nrow(ctus)/2),
+      colorRampPalette(RColorBrewer::brewer.pal(9, "Reds")[3:8])(nrow(ctus)/2))) %>%
+  ggplot(aes(y = mean_LST, x = CTU_NAME, color = color
+             # ,xmin = min_LST, xmax = max_LST
+             ))  +
+  geom_segment(aes(xend=CTU_NAME, yend=-Inf), color = "grey90") + 
+  geom_point() +
+  geom_text(aes(label = format(round(mean_LST, 1), nsmall = 1)), color = "black", hjust = -.5, size = 2) +
+  scale_colour_identity()+
+  coord_flip() +
+  theme_council_open() +
+  theme(axis.title.y = element_blank(),
+        axis.title.x = element_blank()) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.2))) +
+  labs(title = "Average temperature (land surface 2022)")
+  # geom_pointrange()
+
+ggsave(file = file.path(here::here(), "figs/ctu_average.png"),
+       height = 20, width = 6)
+```
 
 # Methods
 
