@@ -105,5 +105,5 @@ write_sf_shp_zip <- function(.capacity, overwrite = FALSE) {
 }
 
 
-write_sf_shp_zip("water_features", overwrite = TRUE)
+write_sf_shp_zip(file.path(here::here(), "data/water_features"), overwrite = TRUE)
 
