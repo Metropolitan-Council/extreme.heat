@@ -541,18 +541,6 @@ acres_heat %>%
 
 ```
 
-```{r}
-#| fig.cap = "Regional temperature bins (relative to reference site temperatures). ",
-#| results='markup', 
-#| out.width= "3.3in",  
-#| out.extra='style="float:right"', 
-#| fig.align='right',
-#| fig.asp = .3
-#| 
-knitr::include_graphics("./hottest_by_year/labeled/bin_2016.png") 
-knitr::include_graphics("./hottest_by_year/labeled/bin_2021.png")
-
-```
 
 ## Social and economic *IMPACT* of extreme heat on residents
 
@@ -829,6 +817,34 @@ ggsave(income, filename = "/Users/escheh/Desktop/income.png", width = 6, height 
 # filter(df1, type == "Income", !str_detect(variable, "180pov")) %>% 
 #   heat_persons_plot() +
 #   scale_y_continuous(labels = scales::percent)
+
+```
+
+```{r}
+filter(df, type == "Income", variable == "income_median") %>% 
+  ggplot(aes(x = estimate, y = heat2022)) +
+    geom_point(alpha = .2,
+               pch = 16,
+               size = .5) +
+    # facet_wrap( ~ name,
+    #             labeller = label_wrap_gen((width = 25))) +
+    theme_council_open() +
+    geom_smooth(fill = NA, color = councilR::colors$councilBlue) +
+    scale_y_continuous(
+      labels = function(x)
+        paste0(x, "°F"),
+      # breaks = seq(80, 100, by = 10),
+      # limits = c(80, 105),
+      expand = c(.01, .01)
+    ) +
+    labs(y = "September\n2022 land\ntemperature",
+         x = "Median household income", 
+         caption = str_wrap(paste0("Sources: 2017-2021 American Community Survey; Landsat and Sentinel-2 satellite imagery Sept. 1, 2022."),width = 140)) +
+    theme(plot.title = element_text(size = 10, face = "bold"),
+          plot.caption = element_text(vjust = -3, size = 7)) +
+  scale_x_continuous(labels = scales::dollar) 
+
+ggsave(filename = file.path(here::here(), "figs/income_heat.png"), height = 4, width = 6)
 
 ```
 
