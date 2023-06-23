@@ -12,10 +12,11 @@ urlcolor: blue
 
 ```{r include = F}
 # library(tidyverse)
-library(lubridate); library(dplyr); library(readr); library(ggplot2); library(tidyr); library(stringr)
 library(councilR)
 library(tidycensus)
 library(patchwork)
+library(tidyverse)
+
 knitr::opts_chunk$set(
   echo = F, message = F, warning = F, results = "hide",
   fig.pos = "H"
@@ -32,33 +33,6 @@ knitr::opts_chunk$set(
 The Metropolitan Council provides local planning assistance for communities across the Twin Cities region. As part of this assistance, the Council provides an “Extreme Heat Mapping Tool” for the Twin Cities. This tool shows the land surface temperature during the historic July 2016 heat wave and was created from remote-sensing data (Landsat 8). This dataset has proved particularly valuable as communities evaluate and plan for climate change adaptation techniques, future development and land use planning, and also undertake immediate interventions to reduce heat-related health consequences. 
 
 The goal of the 2023 update on extreme heat is to do a major addition to the existing body of work. We hope to better integrate the consequences of climate change into city planning and policy decisions, give stakeholders tools to act on mitigating the risk of extreme heat, and ultimately help inform a more sustainable and healthier future for the Twin Cities region.  
-
-# Stories
-
-```{r}
-tibble(month = c("May", "June", "July", "August", "September"), 
-       deaths = c(2, 15, 33, 23, 1)) %>%
-  mutate(month = forcats::fct_relevel(
-    month,
-    "May", "June", "July", "August", "September")) %>%
-  ggplot(aes(x = month, y = deaths)) +
-  geom_col(fill = colors$councilBlue) +
-  theme_council_open() +
-  theme(axis.title.x = element_blank(), 
-        axis.title.y = element_blank(),
-        axis.text = element_text(size = 12),
-        plot.caption = element_text(size = 8)) +
-  labs(title = "Number of heat-related deaths* in Minnesota",
-       caption = ("*Deaths due explicitly to heat only, for years 2000-2022.
-       Source: Minnesota Department of Health.")) + 
-  geom_text(aes(label = deaths), hjust =0, vjust = -2, size = 4) +
-  scale_y_continuous(expand = expansion(mult = c(0.0, 0.2)))
-  
-  ggsave(file.path(here::here(), "figs/mn-heat-deaths.png"),
-         height = 4, width = 5, units = "in")
-
-sum(2, 15, 33, 23, 1)
-```
 
 # Community specific temperatures
 
@@ -108,16 +82,6 @@ ggsave(file = file.path(here::here(), "figs/ctu_average.png"),
 
 # Methods
 
-## Remote sensing temperature
-
-Temperature sensing has been a component of the Landsat satellite missions since 1982 by measuring infrared (long) wavelengths which are emitted from the Earth's surface and are a function of surface temperature. Landsat missions 4 and 5 used a thematic mapper instrument to measure infrared reflectance at 120 meter resolution (which underwent a re-sampling process to 30 meter resolution). Landsat 7 used an enhanced thematic mapper plus instrument which increased the spatial resolution to 30 meters. Landsat 7 had an equipment malfunction (scan line corrector) in 2003 which means that not all land area was measured by the satellite. Landsat missions 8 and 9 have thermal infrared sensors (TIRS and TIRS-2, respectively) which detect long wavelengths of light emitted using Quantum Well Infrared Photodetectors (QWIPs). This is a lower-cost and newer alternative to conventional infrared technology used in previous Landsat missions ([NASA](https://landsat.gsfc.nasa.gov/article/thermal-infrared-sensor-tirs/), [USGS](https://www.usgs.gov/faqs/what-are-band-designations-landsat-satellites)). 
-
-While broad patterns in land temperature can be studied back to 1982 using all Landsat satellite data, more detailed patterns in temperature are best explored from with Landsats 8 and 9 (2013 - present), primarily because of improvements in spatial resolution. Both satellites image the Twin Cities region every 16 days. Since the launch of Landsat 9 in the fall of 2021, this means that high quality temperature data is available for our region every 8 days. Because the region is not measured every day, this means that extreme heat events don't always line up with when we get satellite data. Additionally, cloudy days (water vapor between the satellite and the ground make the pixels seem much cooler, so we can't rely on data with clouds) or days with heavy smoke cover do not produce usable temperature data.
-
-The data update 
-
-<!-- The entire Twin Cities region is covered by Landsat path 27, row 28-29. The east metro is also on path 26, and the west metro is also on path 28.  -->
-
 ### Land surface temperature versus air temperature
 
 Not the same thing, but well correlated. 
@@ -159,7 +123,6 @@ df %>%
   # geom_point() #+
   # # geom_errorbar(aes())
 
-metro_stations %>% select(latitude, longitude, name) %>% write_csv(file = "./data/export_stations_gee.csv")
 
 avg_heat <- read_csv(
   paste0("./data/metc_extremeheat/", list.files("./data/metc_extremeheat/", pattern = "heatac")),
@@ -282,7 +245,7 @@ summary(lm(temp ~ air_temp, data = mod_df))
 mod_b <- 20.1142
 mod_m <- 0.7635
 
-mod_m * (86) + mod_b
+# mod_m * (86) + mod_b
 
   
   ggplot(aes(x = air_temp, y = temp, col = source2), data = mod_df) +
@@ -311,90 +274,6 @@ The demographic data comes from a combination of 2020 decennial census and 2016-
 
 The 2020 decennial census data was accessed from the [MN Geospatial Commons](https://gisdata.mn.gov/dataset/us-mn-state-metc-society-census2020population) and used only for race variables. The 2016-2020 ACS data was accessed using the [tidycensus](https://github.com/walkerke/tidycensus) wrapper for the [Census Bureau's API](https://www.census.gov/programs-surveys/acs/data/data-via-api.html). 
 
-### Ztrax
-
-air conditioning
-
-## Land cover
-
-Should we bring in 2016 - 2020 land use cover/change (uh, yeah, probably! if we want to mechanistically explain any changes this would be super helpful!). This could either be a path analysis by block group (land cover + temp --> mechanism), or scatter plot (cool acres lost vs impervious land cover gained). Or just even a simple, overall summary - regional temp change summary + regional land use change summary.
-
-Also greenspace stuff should be described here. 
-
-<!-- ### Results -->
-
-<!-- Let's discuss. It may not be the best idea to wait for the hottest heat wave in order to update the map (if that was the case, we should go back in time to 1980's). Instead, how can we start to think about shifting risk of extreme heat? Or how the area/s of the region at risk of extreme heat grow/shrink/move over time? -->
-
-<!-- Ideally, it would be great to just pick a summer day with low cloud cover, and look at the spatial patterns (do this for each year! back to 2013 would be easy "a decade of change", but we could go further back too). Would we want to look at ... difference (standard deviations?) from the regional mean temperature? Would it be a (communications/planning) problem that some areas are "colder" than the regional mean?  -->
-
-<!-- I am not totally sure how we will want to do this, other ideas would be super helpful! -->
-
-
-```{r heatmap, fig.align = 'center', out.width = "70%", fig.cap = "Example heat map summer 2022", results='markup', include = F, eval = F}
-knitr::include_graphics(("./heatmap.png"))
-```
-
-
-
-
-```{r warmstripes, include = F, eval = F}
-#| fig.cap = "Idea to show past trends",
-#| results='markup', 
-#| out.width= "3in",  
-#| out.extra='style="float:right"', 
-#| fig.align='right'
-knitr::include_graphics(("./warmingstripes.png"))
-```
-
-
-```{r, fig.asp = .4, fig.cap = "Example trends showing a growing risk from extreme heat", include = F, eval = F}
-mtcars %>%
-  mutate(mpg = mpg * (-1),
-         qsec = qsec * (-1),
-         qsec3 = qsec,
-         qsec2 = qsec) %>%
-  pivot_longer(names_to = "names", values_to = "values", -mpg) %>%
-  filter(names %in% c("qsec2", "qsec3")) %>%
-  ggplot(aes(x = mpg, y = values)) + 
-  facet_wrap(~names, scales = "free") +
-  geom_point(alpha = .5) +
-  geom_smooth(fill = NA, color = colors$councilBlue, method = "lm") +
-  facet_wrap(~names,
-          scales = "free", 
-          nrow = 1, 
-          strip.position = "left",
-          labeller = as_labeller(c(qsec = str_wrap("Maximum summer temperature", 10), 
-                                   qsec2 = str_wrap("Prolonged heat wave events (5 days or more w/ temps >90F)", 10),
-                                   qsec3 = str_wrap("Days above 90F", 10)
-                                   ))) +
-  theme_council_open() +
-  theme(strip.placement = "outside") +
-  labs(x = "Year") +
-  theme(axis.text = element_blank(),
-        axis.title.y = element_blank(),
-        strip.text.y.left = element_text(angle = 0)) #+
-  # geom_hline(aes(yintercept = -13))
-```
-
-```{r, fig.asp = .4, fig.cap = "Example plot showing a lengthening season with extreme heat risk (terminology/idea akin to lengthening wildfire risk season out west).", include = F, eval = F}
- 
-hotcolors <- c("Earliest day >90F" = "green4", "Latest day >90F" = "darkorange2")
-tibble(start = c(150, 160, 170, 180, 190),
-        end = c(275, 270, 265, 260, 250),
-       year = c(2022:2018)) %>%
-  mutate(start = yday(as_date(start)),
-         end = yday(as_date(end)),
-         hot = end - start)  %>%
-  ggplot(aes(x = year)) +
-  geom_point(aes(y = start, color = "Earliest day >90F")) +
-    geom_point(aes(y = end, color = "Latest day >90F")) +
-  theme_council() +
-    scale_color_manual(values = hotcolors)+
-  geom_segment(aes(x = year, xend = year, y = start, yend = end), alpha = .5) +
-  labs(x = "Year", y = "", col = "", title = "Lengthening of 'extreme heat' season")+
-  scale_y_reverse(labels=function(x) strftime(chron::chron(x), "%b %d"), n.breaks = 6) 
-
-```
 
 # Results
 
@@ -476,70 +355,6 @@ msp_temps %>% filter(datatype %in% c("TMAX", "TMIN")) %>%
 #may - sept
 ```
 
-### Extreme heat map
-
-Maybe not updating the 2016 map with 2021/2022 data, but instead adding more information? Decision can get made at the end of summer - we just need to see what heat events line-up with Landsat measurements this year. 
-
-### "Losing our cool"
-
-Since 2016, the region's coolest areas are disappearing (68% of the region down to 51%; Figure \@ref(fig:region-land-tempbin)). If we take the temperature of some reference sites around the region (**let's think about what actually makes sense here for reference sites**) and look at the amount of the region's land which is at least 1 standard deviation cooler than the reference sites, we've lost those cool areas. It also looks like we might have had a decrease in the hottest areas (areas with temps more than 1 standard deviation above the reference sites; 6.4 down to 2.8%), which tells me that *maybe* the prior extreme heat work impacted planning meaningfully. 
-
-Of course, these results are pretty dependent on getting the reference sites right! So all of this should get recalculated/analyzed once that is figured out. 
-
-
-```{r, region-land-tempbin}
-#| fig.cap = "Total land area of the region which falls into different temperature bins (relative to reference site temperatures). ",
-#| results='markup', 
-#| out.width= "6in",  
-#| out.extra='style="float:right"', 
-#| fig.align='right',
-#| fig.asp = .8
-
-acres_heat <- read_csv(
-  paste0("./data/metc_extremeheat/", list.files("./data/metc_extremeheat/", pattern = "heatmeans")),
-  col_select = c(year, CTU_NAME, sq_miles),
-  id = "year"
-  ) %>%
-  mutate(year = as.numeric(str_remove_all(year, ("./data/metc_extremeheat/heatmeans_|.csv"))),
-         sq_miles = str_remove_all(sq_miles, "\\{groups=\\[|\\}|\\{|tempbin\\=[123456],|\\]|, | ")) %>%
-  separate(sq_miles, sep = c("sum="), 
-           into = c("na", "coolest", "cool", "average", "hot", "hottest")) %>% #into = as.character(seq(0, 5))) %>%
-  select(-na) %>%# select(-`0`) 
-  pivot_longer(names_to = "tempbin", values_to = "miles", -c(year, CTU_NAME)) %>%
-  mutate(miles = as.numeric(miles)) %>%
-  mutate(tempbin = factor(tempbin, levels=c("hottest", "hot", "average", "cool", "coolest")))
-
-acres_heat %>%
-  group_by(year, tempbin) %>%
-  summarise(miles = sum(miles, na.rm = T)) %>%
-   ungroup() %>% group_by(year) %>%
-   mutate(total = sum(miles),
-          label = paste0(round(miles / total *100, 1), "%"),
-          lab_y = miles / total) %>%
-  filter(year > 2013) %>%
-  ggplot(aes(x = as.character(year), y = miles, fill = tempbin)) +
-  geom_bar(stat = "identity", position = "stack") +
-  scale_fill_brewer(palette = "RdBu") +
-  # facet_wrap(~CTU_NAME, scales = "free") +
-  theme_council_open() + 
-  theme(legend.position = "bottom") +
-    geom_text(aes(label = if_else(lab_y <.05, NA_character_, label), y = miles), position = "stack", vjust = 1.5,
-        size = 3) +
-  labs(title = "7-county region", y = "Square\nmiles\n(land)",
-       x = "", fill = "temperature",
-       caption = "Temperature bins are in relation to 14 reference sites, NOAA temperatures.\nAverage = within 0.5 standard deviations of reference site temperature.\nCool/hot are within 1 sd, and coolest/hottest \nare > 1 sd away from reference site temperature.")
-# 
-# 
-# acres_heat %>%
-#   filter(str_detect(CTU_NAME, "Minneapolis|Elmo|Maplewood|Woodbury")) %>%
-#   ggplot(aes(x = as.character(year), y = acres, fill = tempbin)) +
-#   geom_bar(stat = "identity", position = "stack") +
-#   scale_fill_brewer(palette = "RdBu", direction = -1) +
-#   facet_wrap(~CTU_NAME, scales = "free") +
-#   theme_council_open() +
-#   labs(y = "Square\nmiles\n(land)")
-
-```
 
 
 ## Social and economic *IMPACT* of extreme heat on residents
@@ -910,41 +725,6 @@ ggsave(tenure, filename = "/Users/escheh/Desktop/tenure.png", width = 6, height 
 
 
 
-## *MITIGATION* and *ADAPTATION* strategies for extreme heat 
-
-If rising temperatures are inevitable, how are residents/cities going to adapt/mitigate impact? Aka Link variables about the built and natural environments
-
-- tree canopy (link with growing shade) / impervious surfaces (link with surface with purpose and/or localized flooding); **show how land use decisions impact local temperatures**
-- housing metrics from ztrax zillow data; is there an "adaptation gap" to extreme heat? (idea = systemic structural/economic/racial issues may also manifest as no cooling available to residents to mitigate extreme heat). with ztrax consider if we can get cooling data directly from county assessors or parcel data (and keep in mind that county-to-county might be challenging to compare.) maybe consider age of housing stock too (thinking about energy efficiency, etc.)
-
-**ADD OVERLAY MAPS** to the storymap! (kind of like how land use is there now, but try to be more explicit? think about how the data could be compelling to inform landscape architecture, etc.)
-
-### Air conditioning in residences - NOT DONE
-
-These data come from ztrax. The percent of residences which have some type of cooling system.
-
-There are still issues with Zillow ZTRAX data (for instance, the whole city of Minneapolis and all of Dakota county are currently missing)! But this is the emerging (and tentative) pattern (Figure \@ref(fig:ac-fig)).
-
-```{r ac-fig}
-#| fig.cap = "Relationship between air conditioning presence in residences and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region.",
-#| results='markup', 
-#| out.width= "6in",  
-#| out.extra='style="float:right"', 
-#| fig.align='right',
-#| fig.asp = .7
-load("./data/noAC.rda")
-
-noAC %>%
-  inner_join(heat) %>%
-  ggplot(aes(x = heat2022, y = percent_noAC)) +
-  geom_point(alpha= .5) +
-  theme_council_open() +
-  labs(x = "September 2022 land temperature",
-       y = str_wrap("Percent of residences without air conditioning", 10),
-       caption = "Source: Zillow ZTRAX")
-
-```
-
 ```{r, fig.asp = .3, fig.cap="Example plots showing how the built/natural environments interact with extreme heat.", include = F, eval = F}
 mtcars %>%
   mutate(mpg = mpg * (-1),
@@ -973,120 +753,3 @@ mtcars %>%
         axis.title.y = element_blank(),
         strip.text.y.left = element_text(angle = 0))
 ```
-
-### Greenspace - NOT DONE
-
-Plants can cool areas via shade and/or evapotranspiration (Figure \@ref(fig:greenspace-fig)). 
-
-Tree canopy is a little stranger. It falls apart only in deeply agricultural areas, where greenness is high (thanks to corn/soybeans) and temps are pretty low...but tree canopy is also very low (because it's cropland and not forest). Could probably show the relationship between trees and temperatures for urban/suburban areas and just exclude agricultural areas. 
-
-Would also be great to show areas which have lost tree canopy. 
-
-```{r greenspace-fig}
-#| fig.cap = "Relationship between greenspace and land surface temperature during a heat wave for census block groups across the 7-county Twin Cities metropolitan region.",
-#| results='markup', 
-#| out.width= "6in",  
-#| out.extra='style="float:right"', 
-#| fig.align='right',
-#| fig.asp = .7
-process_environment <- FALSE
-source("./R/environment.R")
-
-green_heat <- environment %>%
-  filter(variable == "ndvi_land") %>%
-  right_join(heat)
-
-green_heat %>%
-  ggplot(aes(x = heat2022, y = value)) +
-  geom_point(alpha = .2) +
-  geom_smooth(fill = NA, color = colors$councilBlue) +
-    theme_council_open() +
-      scale_x_continuous(
-      labels = function(x)
-        paste0(x, "°F"),
-      breaks = seq(80, 100, by = 5),
-      limits = c(80, 105),
-      expand = c(.01, .01)
-    ) +
-  facet_wrap(~name, scales = "free_y") +
-    labs(x = "September 2022 land temperature",
-         y = "", #str_wrap("Average land greenness (NDVI 2021)",width = 20),
-         caption = str_wrap("Sources: 2021 Sentinel-2 imagery;\nJuly 22, 2016 Landsat 8 thermal infared sensor", width = 60))
-
-```
-
-# Narrative 
-
-Update StoryMap. Consider UofM RCP program - could students do some of this qualitative data gathering? 
-
-Idea: is it possible to capture a personal/neighborhood experience of heat (aka break down what **human vulnerability to heat** is/means/manifests around the region).
-
-## Cooling centers
-
-Is it possible to map them? Or have definitions become standardized? Paid versus free cooling options, etc. 
-Splash pads?
-Is there a "cooling desert" (like food desert)?
-
-## Landscaping
-
-How does landscaping impact heat? Consider:
-
-- EAB and tre removal
-- commercial landscaping opportunities
-- green roofs, etc. 
-
-## Health outcomes
-
-Anything with co-morbidities. 
-
-Check out that study in Baltimore about heat and deaths - are there cool links we can make for our region?
-
-- https://www.sciencedirect.com/science/article/pii/S030438002100123X
-- Extremely hot days are those with daily minimum temperature at or greater than the 99th percentile. The minimum temperature is used as an indication of nighttime relief from heat
-
-
-
-## Grassroots efforts
-
-What are the grassroots efforts related to heat? Could include:
-
-- green roofs
-- heat pumps/cooling
-- programs $ nonprofits providing relief
-- building social connections/safety in extreme heat
-
-
-# Disemination 
-
-- How to engage stakeholders and provide educational opportunities around the update?
-- Plan for COW presentation? 
-- Update MN Geospatial commons data
-- Would communications folks want to be engaged?
-- Should we bring drought into the picture here (aka temperature + precipitation)? 
-
-# Scenario planning
-
-Here we ask the question about 
-
-```{r}
-#from gee
-new_sfd <- 90.54840337800199
-new_mf <- 91
-new_commercial <- 99
-new_industrial <- 100
-
-```
-
-
-
-<!-- # Game Plan -->
-
-<!-- 1) Build GEE model to get 2022 heat data --> 
-<!-- 2) Start to link people into the story (demographics/etc) -->
-<!--   - this can be done with old 2016 data too --> 
-<!--   - stories - this is a bigger lift, consider RCP stuff later -->
-<!-- 3) Contextualize 2016 data -->
-<!--   - how historic was 2016? or was it just good to measure (clouds, smoke impact readings in 2021) -->
-<!--   - if 2022 has a similar event, has there been an expansion or contraction in the vulnerable area of our region (likely driven by development patterns, land use, etc). vulnerable = areas at risk from extreme heat. -->
-<!--   - map the expansion of vulnerability, overlay with development? -->
-<!--   - show rising median/mean temps (with change in other variables like eab?) -->
