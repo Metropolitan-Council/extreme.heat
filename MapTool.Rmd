@@ -94,7 +94,7 @@ heat_tool <- leaflet(options = leafletOptions(
 heat_tool
 
 # Dimension of the map
-heat_tool$width <- 874
+heat_tool$width <- 700
 heat_tool$height <- 450
 
 
