@@ -37,13 +37,13 @@ The goal of the 2023 update on extreme heat is to do a major addition to the exi
 # Community specific temperatures
 
 ```{r}
-ctus <- read_csv(file.path(here::here(), "data-raw/ExtremeHeat2022_ctus_max.csv"),
+ctus <- read_csv(file.path(here::here(), "r_postprocessing/data-raw/ExtremeHeat2022_ctus_max.csv"),
                  col_select = c(CTU_NAME, LST = max_LST)) %>%
   add_column(type = "max_LST") %>%
-  bind_rows(read_csv(file.path(here::here(), "data-raw/ExtremeHeat2022_ctus_min.csv"),
+  bind_rows(read_csv(file.path(here::here(), "r_postprocessing/data-raw/ExtremeHeat2022_ctus_min.csv"),
                  col_select = c(CTU_NAME, LST = min_LST)) %>%
               add_column(type = "min_LST")) %>%
-  bind_rows(read_csv(file.path(here::here(), "data-raw/ExtremeHeat2022_ctus_mean.csv"),
+  bind_rows(read_csv(file.path(here::here(), "r_postprocessing/data-raw/ExtremeHeat2022_ctus_mean.csv"),
                  col_select = c(CTU_NAME, LST = mean_LST)) %>%
               add_column(type = "mean_LST")) %>%
     mutate(LST = stringr::str_remove_all(LST, "\\{LST=|\\}|null"),
@@ -52,7 +52,7 @@ ctus <- read_csv(file.path(here::here(), "data-raw/ExtremeHeat2022_ctus_max.csv"
   arrange(CTU_NAME) %>%
   select(CTU_NAME, min_LST, mean_LST, max_LST)
 
-write_csv(ctus, file = file.path(here::here(), "figs/ctu_average.csv"))
+write_csv(ctus, file = file.path(here::here(), "r_postprocessing/figs/ctu_average.csv"))
 
 
 ctus %>%
@@ -76,7 +76,7 @@ ctus %>%
   labs(title = "Average temperature (land surface 2022)")
   # geom_pointrange()
 
-ggsave(file = file.path(here::here(), "figs/ctu_average.png"),
+ggsave(file = file.path(here::here(), "r_postprocessing/figs/ctu_average.png"),
        height = 20, width = 6)
 ```
 
@@ -659,7 +659,7 @@ filter(df, type == "Income", variable == "income_median") %>%
           plot.caption = element_text(vjust = -3, size = 7)) +
   scale_x_continuous(labels = scales::dollar) 
 
-ggsave(filename = file.path(here::here(), "figs/income_heat.png"), height = 4, width = 6)
+ggsave(filename = file.path(here::here(), "r_postprocessing/figs/income_heat.png"), height = 4, width = 6)
 
 ```
 
